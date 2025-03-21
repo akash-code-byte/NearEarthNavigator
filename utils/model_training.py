@@ -55,6 +55,9 @@ def prepare_data_for_training(df):
 
 def train_and_evaluate_models(df, model_type='Random Forest', model_params=None):
     """
+    Train and evaluate models with hyperparameter tuning and cross-validation
+    """
+    """
     Train and evaluate machine learning models for asteroid hazard prediction
     
     Parameters:
@@ -436,11 +439,26 @@ def evaluate_model(model, X_test, y_test):
             # Default to binary predictions
             y_prob = y_pred.astype(float)
     
-    # Calculate metrics
+    # Calculate comprehensive metrics
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
+    
+    # Add cross-validation scores
+    cv_scores = cross_val_score(model, X_test, y_test, cv=5)
+    
+    # Calculate metrics at different probability thresholds
+    thresholds = [0.3, 0.5, 0.7]
+    precision_at_thresholds = {}
+    recall_at_thresholds = {}
+    f1_at_thresholds = {}
+    
+    for threshold in thresholds:
+        y_pred_at_threshold = (y_prob >= threshold).astype(int)
+        precision_at_thresholds[threshold] = precision_score(y_test, y_pred_at_threshold)
+        recall_at_thresholds[threshold] = recall_score(y_test, y_pred_at_threshold)
+        f1_at_thresholds[threshold] = f1_score(y_test, y_pred_at_threshold)
     
     # ROC curve
     fpr, tpr, _ = roc_curve(y_test, y_prob)
@@ -472,6 +490,18 @@ def evaluate_model(model, X_test, y_test):
             'true_positive': tp
         }
     }
+    
+    # Add class distribution
+    class_distribution = dict(zip(*np.unique(y_test, return_counts=True)))
+    
+    # Add all metrics to the dictionary
+    metrics.update({
+        'cross_val_scores': cv_scores,
+        'class_distribution': class_distribution,
+        'precision_at_thresholds': precision_at_thresholds,
+        'recall_at_thresholds': recall_at_thresholds,
+        'f1_at_thresholds': f1_at_thresholds
+    })
     
     return metrics
 
