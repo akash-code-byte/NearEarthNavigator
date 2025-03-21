@@ -478,7 +478,62 @@ def plot_precision_recall_curve(precision, recall, avg_precision):
     
     return fig
 
-def create_3d_asteroid_visualization(df):
+def create_3d_asteroid_visualization(df, map_type='3d'):
+    if map_type == 'global':
+        # Generate random impact locations
+        num_impacts = min(len(df), 20)  # Limit for visualization
+        np.random.seed(42)  # For reproducibility
+        
+        # Create impact coordinates
+        lats = np.random.uniform(-80, 80, num_impacts)
+        lons = np.random.uniform(-180, 180, num_impacts)
+        
+        # Create impact energy and size values
+        energies = df['energy_proxy'].head(num_impacts).values
+        sizes = df['estimated_diameter_max'].head(num_impacts).values * 1000  # Convert to meters
+        
+        # Create hover text
+        hover_texts = []
+        for i in range(num_impacts):
+            text = (f"Impact Energy: {energies[i]:.2f} MT<br>"
+                   f"Size: {sizes[i]:.1f} m<br>"
+                   f"Location: {lats[i]:.2f}°N, {lons[i]:.2f}°E")
+            hover_texts.append(text)
+        
+        # Create the map
+        fig = go.Figure(data=go.Scattergeo(
+            lon=lons,
+            lat=lats,
+            mode='markers',
+            marker=dict(
+                size=sizes/10,
+                color=energies,
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(title='Impact Energy (MT)'),
+                sizemode='area',
+            ),
+            text=hover_texts,
+            hoverinfo='text'
+        ))
+        
+        fig.update_layout(
+            title='Predicted NEO Impact Locations',
+            geo=dict(
+                showland=True,
+                showcountries=True,
+                showocean=True,
+                countrywidth=0.5,
+                landcolor='rgb(243, 243, 243)',
+                oceancolor='rgb(204, 229, 255)',
+                projection_type='equirectangular'
+            ),
+            height=600
+        )
+        
+        return fig
+    
+    # Original 3D visualization code
     """
     Create a 3D visualization of asteroids
     

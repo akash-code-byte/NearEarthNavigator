@@ -405,7 +405,57 @@ def train_neural_network(X_train, y_train, params):
         model.fit(X_train, y_train)
         return model
 
-def evaluate_model(model, X_test, y_test):
+def evaluate_model(model, X_test, y_test, X_train=None, y_train=None):
+    """Enhanced model evaluation with additional metrics"""
+    metrics = {}
+    
+    # Basic metrics
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1] if hasattr(model, 'predict_proba') else y_pred
+    
+    metrics['accuracy'] = accuracy_score(y_test, y_pred)
+    metrics['precision'] = precision_score(y_test, y_pred)
+    metrics['recall'] = recall_score(y_test, y_pred)
+    metrics['f1'] = f1_score(y_test, y_pred)
+    
+    # ROC and AUC
+    fpr, tpr, _ = roc_curve(y_test, y_prob)
+    metrics['auc'] = auc(fpr, tpr)
+    metrics['fpr'] = fpr
+    metrics['tpr'] = tpr
+    
+    # Precision-Recall curve
+    precision_curve, recall_curve, _ = precision_recall_curve(y_test, y_prob)
+    metrics['precision_curve'] = precision_curve
+    metrics['recall_curve'] = recall_curve
+    metrics['avg_precision'] = average_precision_score(y_test, y_prob)
+    
+    # Confusion matrix components
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+    metrics.update({
+        'tn': tn, 'fp': fp, 'fn': fn, 'tp': tp,
+        'specificity': tn / (tn + fp) if (tn + fp) > 0 else 0,
+        'sensitivity': tp / (tp + fn) if (tp + fn) > 0 else 0,
+        'training_samples': len(X_train) if X_train is not None else None,
+        'test_samples': len(X_test)
+    })
+    
+    # Calculate cross-validation scores if training data is provided
+    if X_train is not None and y_train is not None:
+        cv_scores = cross_val_score(model, X_train, y_train, cv=5)
+        metrics['cv_mean'] = cv_scores.mean()
+        metrics['cv_std'] = cv_scores.std()
+    
+    # Add class distribution
+    metrics['class_distribution'] = dict(zip(*np.unique(y_test, return_counts=True)))
+    
+    # Add model-specific metrics
+    if hasattr(model, 'feature_importances_'):
+        metrics['feature_importances'] = model.feature_importances_
+    elif hasattr(model, 'coef_'):
+        metrics['feature_importances'] = model.coef_[0]
+    
+    return metrics
     """
     Evaluate model performance
     
