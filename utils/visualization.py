@@ -494,6 +494,19 @@ def plot_precision_recall_curve(precision, recall, avg_precision):
     return fig
 
 def create_3d_asteroid_visualization(df, map_type='3d'):
+    """
+    Create a 3D visualization of asteroids
+    
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        DataFrame with asteroid data
+        
+    Returns:
+    --------
+    plotly.graph_objects.Figure
+        Plotly figure object
+    """
     if map_type == 'global':
         # Generate random impact locations
         num_impacts = min(len(df), 20)  # Limit for visualization
