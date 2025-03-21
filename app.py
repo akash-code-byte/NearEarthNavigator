@@ -1041,19 +1041,73 @@ if 'neo_df' in st.session_state:
             else:
                 st.info("No numeric features available for correlation analysis.")
     
-    # Impact Simulator Tab
+    # Impact Simulator Tab - Enhanced with collision simulation
     with tabs[4]:
-        st.subheader("Asteroid Impact Simulator")
-        
         st.markdown("""
-        <div style='background-color: rgba(240, 240, 240, 0.5); border-radius: 10px; padding: 15px; margin-bottom: 20px; border-left: 6px solid #4CAF50;'>
-            <h4 style='color: #000000; margin-top:0;'>About Impact Simulation</h4>
-            <p style='color: #000000;'>
-            This simulator uses physics-based models to estimate the potential consequences of an asteroid impact on Earth.
-            Adjust the parameters below to simulate different impact scenarios and view the estimated effects.
+        <style>
+        .simulator-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .simulator-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            border-top: 5px solid #FF5722;
+        }
+        .simulator-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .sim-type-btn {
+            padding: 12px 16px;
+            font-weight: 500;
+            border-radius: 8px;
+            margin: 0 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .sim-type-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+        .sim-type-active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .sim-type-inactive {
+            background-color: #f2f2f2;
+            color: #333;
+        }
+        </style>
+        
+        <div class="simulator-header">
+            <h2 style="font-size: 2.2rem; font-weight: 700; color: #FF5722; margin-bottom: 10px;">🔥 Impact Simulator</h2>
+            <p style="font-size: 1.1rem; color: #555; max-width: 700px; margin: 0 auto;">
+                Advanced simulation tools to model asteroid impacts, collisions, and assess potential Earth damage
             </p>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Simulation type tabs
+        sim_types = ["Single Impact", "Asteroid Collision & Fragmentation"]
+        sim_type = st.radio("Select Simulation Type", sim_types, horizontal=True)
+        
+        if sim_type == "Single Impact":
+            st.markdown("""
+            <div class="simulator-card">
+                <div class="simulator-title">🌍 Single Asteroid Impact Simulator</div>
+                <p style="color: #555; margin-bottom: 20px;">
+                This simulator uses physics-based models to estimate the potential consequences of an asteroid impact on Earth.
+                Adjust the parameters below to simulate different impact scenarios and view the estimated effects.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Create two columns for input parameters
         col1, col2 = st.columns(2)
@@ -1306,7 +1360,420 @@ if 'neo_df' in st.session_state:
                         color='Energy (Megatons)', color_continuous_scale='Viridis')
             fig.update_layout(title="Impact Energy Comparison (Log Scale)")
             st.plotly_chart(fig, use_container_width=True)
+        
+        elif sim_type == "Asteroid Collision & Fragmentation":
+            st.markdown("""
+            <div class="simulator-card" style="border-top-color: #9C27B0;">
+                <div class="simulator-title">☄️ Asteroid Collision & Fragmentation Simulator</div>
+                <p style="color: #555; margin-bottom: 20px;">
+                This simulator models what happens when two asteroids collide in space, resulting in fragmentation and potential Earth impacts of the resulting debris.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
             
+            # Two columns for input parameters
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Primary Asteroid")
+                primary_diameter = st.slider("Primary Diameter (meters)", 50, 1000, 300)
+                primary_velocity = st.slider("Primary Velocity (km/s)", 5, 40, 15)
+                primary_density = st.slider("Primary Density (kg/m³)", 1500, 5000, 3000, step=100)
+                
+                st.subheader("Collision Parameters")
+                collision_angle = st.slider("Collision Angle (degrees)", 0, 90, 45)
+                distance_from_earth = st.slider("Distance from Earth (million km)", 0.1, 10.0, 2.0, step=0.1)
+                
+            with col2:
+                st.subheader("Secondary Asteroid")
+                secondary_diameter = st.slider("Secondary Diameter (meters)", 10, 500, 100)
+                secondary_velocity = st.slider("Secondary Velocity (km/s)", 5, 40, 20)
+                secondary_density = st.slider("Secondary Density (kg/m³)", 1500, 5000, 2500, step=100)
+                
+                st.subheader("Fragmentation Settings")
+                fragment_size_distribution = st.select_slider(
+                    "Fragment Size Distribution",
+                    options=["Mostly Small", "Mixed", "Mostly Large"],
+                    value="Mixed"
+                )
+                
+                momentum_conservation = st.checkbox("Apply Momentum Conservation", value=True)
+            
+            # Calculate collision button
+            simulate_collision_button = st.button("Simulate Collision", key="collision_button")
+            
+            if simulate_collision_button:
+                st.subheader("Collision Simulation Results")
+                
+                # Create a progress indicator for the simulation
+                progress_bar = st.progress(0)
+                for i in range(100):
+                    time.sleep(0.01)  # Small delay for visual effect
+                    progress_bar.progress(i + 1)
+                
+                # Calculate masses
+                import math
+                
+                def calculate_mass(diameter, density):
+                    radius = diameter / 2
+                    volume = (4/3) * math.pi * (radius**3)
+                    return volume * density  # kg
+                
+                primary_mass = calculate_mass(primary_diameter, primary_density)
+                secondary_mass = calculate_mass(secondary_diameter, secondary_density)
+                
+                # Calculate impact energy
+                relative_velocity = abs(primary_velocity - secondary_velocity)
+                collision_energy_joules = 0.5 * min(primary_mass, secondary_mass) * (relative_velocity * 1000)**2
+                collision_energy_megatons = collision_energy_joules / 4.184e15
+                
+                # Create columns for results
+                res_col1, res_col2 = st.columns(2)
+                
+                with res_col1:
+                    st.metric("Collision Energy", f"{collision_energy_megatons:.2f} megatons of TNT")
+                    
+                    # Calculate how many fragments will be created based on energy and size distribution
+                    if fragment_size_distribution == "Mostly Small":
+                        fragment_multiplier = 15
+                    elif fragment_size_distribution == "Mixed":
+                        fragment_multiplier = 10
+                    else:  # Mostly Large
+                        fragment_multiplier = 5
+                    
+                    # Number of fragments based on energy and distribution setting
+                    num_fragments = int(math.log10(collision_energy_joules) * fragment_multiplier)
+                    
+                    st.metric("Number of Fragments", f"{num_fragments}")
+                    
+                    # Calculate largest fragment size
+                    if fragment_size_distribution == "Mostly Small":
+                        largest_fragment_pct = 0.2  # 20% of original size
+                    elif fragment_size_distribution == "Mixed":
+                        largest_fragment_pct = 0.4  # 40% of original size
+                    else:  # Mostly Large
+                        largest_fragment_pct = 0.6  # 60% of original size
+                    
+                    largest_fragment_size = max(primary_diameter, secondary_diameter) * largest_fragment_pct
+                    st.metric("Largest Fragment Size", f"{largest_fragment_size:.1f} meters")
+                
+                with res_col2:                    
+                    # Estimate number of Earth-bound fragments
+                    # This is a simplified model - in reality would depend on orbital mechanics
+                    earth_solid_angle = 4 * math.pi * (6371e3 / (distance_from_earth * 1e9))**2  # steradians
+                    total_solid_angle = 4 * math.pi  # steradians
+                    
+                    # Fragments that have Earth-intercept trajectories
+                    earth_directed_pct = earth_solid_angle / total_solid_angle
+                    # Apply a fudge factor for dramatic effect
+                    earth_directed_pct = min(0.2, earth_directed_pct * 5000)
+                    
+                    earth_bound_fragments = int(num_fragments * earth_directed_pct)
+                    earth_bound_fragments = max(1, earth_bound_fragments)  # At least 1 for simulation purposes
+                    
+                    st.metric("Earth-Bound Fragments", f"{earth_bound_fragments}")
+                    
+                    # Estimate time until fragments reach Earth
+                    avg_fragment_velocity = (primary_velocity + secondary_velocity) / 2  # km/s
+                    time_to_earth = (distance_from_earth * 1e6) / (avg_fragment_velocity * 3600 * 24)  # days
+                    
+                    st.metric("Time to Earth Impact", f"{time_to_earth:.1f} days")
+                    
+                    # Potential impact energy on Earth
+                    total_fragment_mass = primary_mass + secondary_mass
+                    earth_bound_mass = total_fragment_mass * earth_directed_pct
+                    earth_impact_energy = 0.5 * earth_bound_mass * (avg_fragment_velocity * 1000)**2
+                    earth_impact_megatons = earth_impact_energy / 4.184e15
+                    
+                    st.metric("Potential Earth Impact Energy", f"{earth_impact_megatons:.2f} megatons of TNT")
+                
+                # Generate a visualization of the collision
+                st.subheader("Collision and Fragmentation Visualization")
+                
+                # Create a 3D scatter plot for the fragmentation
+                import numpy as np
+                
+                # Generate random fragments
+                np.random.seed(42)  # For reproducibility
+                
+                # Color map based on fragment size
+                fragment_sizes = []
+                fragment_velocities = []
+                for i in range(num_fragments):
+                    if fragment_size_distribution == "Mostly Small":
+                        size = np.random.exponential(0.1) * largest_fragment_size
+                    elif fragment_size_distribution == "Mixed":
+                        size = np.random.beta(2, 2) * largest_fragment_size
+                    else:  # Mostly Large
+                        size = np.random.beta(5, 2) * largest_fragment_size
+                    
+                    size = max(1, size)  # Minimum size 1m for visibility
+                    fragment_sizes.append(size)
+                    
+                    # Fragment velocities
+                    if momentum_conservation:
+                        # More realistic: distribute momentum based on mass ratio
+                        v_factor = np.random.normal(1.0, 0.3)
+                        fragment_velocities.append(
+                            ((primary_velocity * primary_mass) + (secondary_velocity * secondary_mass)) / 
+                            (primary_mass + secondary_mass) * v_factor
+                        )
+                    else:
+                        # Simplified: velocity is between primary and secondary
+                        fragment_velocities.append(
+                            np.random.uniform(min(primary_velocity, secondary_velocity), 
+                                             max(primary_velocity, secondary_velocity))
+                        )
+                
+                # Generate fragment directions in a cone
+                theta = np.random.uniform(0, 2*np.pi, num_fragments)
+                phi = np.random.uniform(0, collision_angle*np.pi/180, num_fragments)
+                
+                # Convert to Cartesian coordinates
+                x = np.sin(phi) * np.cos(theta)
+                y = np.sin(phi) * np.sin(theta)
+                z = np.cos(phi)
+                
+                # Scale based on velocity and time
+                time_factor = 50  # For visualization
+                x = x * fragment_velocities * time_factor
+                y = y * fragment_velocities * time_factor
+                z = z * fragment_velocities * time_factor
+                
+                # Create scatter plot of fragments
+                fragment_df = pd.DataFrame({
+                    'x': x,
+                    'y': y,
+                    'z': z,
+                    'size': fragment_sizes,
+                    'velocity': fragment_velocities,
+                    'earth_bound': np.random.choice([True, False], size=num_fragments, p=[earth_directed_pct, 1-earth_directed_pct])
+                })
+                
+                # Color earth-bound fragments red
+                colors = np.where(fragment_df['earth_bound'], 'red', 'gray')
+                
+                # Create 3D scatter
+                fig = go.Figure(data=[
+                    go.Scatter3d(
+                        x=fragment_df['x'],
+                        y=fragment_df['y'],
+                        z=fragment_df['z'],
+                        mode='markers',
+                        marker=dict(
+                            size=fragment_df['size']/5,  # Scale down for visualization
+                            color=colors,
+                            opacity=0.8
+                        ),
+                        name='Fragments'
+                    )
+                ])
+                
+                # Add primary and secondary asteroids at collision point
+                fig.add_trace(go.Scatter3d(
+                    x=[0],
+                    y=[0],
+                    z=[0],
+                    mode='markers',
+                    marker=dict(
+                        size=20,
+                        color='blue',
+                        symbol='diamond'
+                    ),
+                    name='Collision Point'
+                ))
+                
+                # Add Earth (scaled)
+                earth_distance = distance_from_earth * 1000  # for visualization
+                earth_radius = 10  # scaled radius for visualization
+                
+                # Create a sphere for Earth
+                u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+                x_earth = earth_distance + earth_radius * np.cos(u) * np.sin(v)
+                y_earth = earth_radius * np.sin(u) * np.sin(v)
+                z_earth = earth_radius * np.cos(v)
+                
+                fig.add_trace(go.Surface(
+                    x=x_earth, y=y_earth, z=z_earth,
+                    colorscale=[[0, 'blue'], [1, 'cyan']],
+                    opacity=0.8,
+                    name='Earth'
+                ))
+                
+                # Add vectors for fragment paths to Earth
+                earth_bound_df = fragment_df[fragment_df['earth_bound']]
+                if not earth_bound_df.empty:
+                    for idx, row in earth_bound_df.iterrows():
+                        # Create a line from fragment to Earth
+                        fig.add_trace(go.Scatter3d(
+                            x=[row['x'], earth_distance],
+                            y=[row['y'], 0],
+                            z=[row['z'], 0],
+                            mode='lines',
+                            line=dict(color='red', width=1, dash='dot'),
+                            showlegend=False
+                        ))
+                
+                # Update layout
+                fig.update_layout(
+                    title="Asteroid Collision and Fragmentation Simulation",
+                    scene=dict(
+                        xaxis_title="X (km)",
+                        yaxis_title="Y (km)", 
+                        zaxis_title="Z (km)",
+                        aspectratio=dict(x=2, y=1, z=1)
+                    ),
+                    height=700,
+                    legend=dict(x=0.01, y=0.99)
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Add animation of fragments over time
+                st.subheader("Fragments Approaching Earth (Animation)")
+                
+                # Generate animation frames
+                frames = 50
+                
+                # Create dataframe for animation
+                anim_data = []
+                for i in range(frames):
+                    fraction = i / (frames - 1)
+                    for j, row in fragment_df.iterrows():
+                        if row['earth_bound'] or np.random.random() < 0.2:  # Include some non-Earth-bound for context
+                            anim_data.append({
+                                'frame': i,
+                                'fragment_id': j,
+                                'x': row['x'] + (earth_distance - row['x']) * fraction,
+                                'y': row['y'] * (1 - fraction),
+                                'z': row['z'] * (1 - fraction),
+                                'size': row['size'],
+                                'earth_bound': row['earth_bound'],
+                                'velocity': row['velocity']
+                            })
+                
+                anim_df = pd.DataFrame(anim_data)
+                
+                # Create animation
+                fig = px.scatter_3d(
+                    anim_df, x='x', y='y', z='z',
+                    animation_frame='frame',
+                    color='earth_bound',
+                    color_discrete_map={True: 'red', False: 'gray'},
+                    size='size', size_max=15,
+                    hover_data=['velocity'],
+                    title="Fragments Approaching Earth Over Time"
+                )
+                
+                # Add Earth at the end point
+                for i in range(frames):
+                    fig.add_trace(
+                        go.Scatter3d(
+                            x=[earth_distance], y=[0], z=[0],
+                            mode='markers',
+                            marker=dict(
+                                size=15,
+                                color='blue'
+                            ),
+                            name='Earth',
+                            showlegend=(i == 0)
+                        ),
+                        frame=f"{i}"
+                    )
+                
+                # Update layout
+                fig.update_layout(
+                    scene=dict(
+                        xaxis_title="X (km)",
+                        yaxis_title="Y (km)", 
+                        zaxis_title="Z (km)",
+                        aspectratio=dict(x=2, y=1, z=1)
+                    ),
+                    height=600
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Estimated impact locations
+                st.subheader("Estimated Impact Locations")
+                
+                # Generate random impact locations on Earth
+                num_impacts = min(earth_bound_fragments, 20)  # Limit for visualization
+                
+                # Create random lat/long coordinates
+                np.random.seed(int(primary_diameter + secondary_diameter))
+                impact_lats = np.random.uniform(-80, 80, num_impacts)
+                impact_longs = np.random.uniform(-180, 180, num_impacts)
+                
+                # Create size and energy for each impact
+                impact_sizes = []
+                impact_energies = []
+                
+                for i in range(num_impacts):
+                    size_factor = np.random.beta(2, 5) if fragment_size_distribution == "Mostly Small" else \
+                                 np.random.beta(2, 2) if fragment_size_distribution == "Mixed" else \
+                                 np.random.beta(5, 2)
+                    
+                    impact_size = largest_fragment_size * size_factor
+                    impact_sizes.append(impact_size)
+                    
+                    # Calculate energy
+                    impact_mass = calculate_mass(impact_size, (primary_density + secondary_density)/2)
+                    impact_velocity = fragment_velocities[i % len(fragment_velocities)]
+                    impact_energy = 0.5 * impact_mass * (impact_velocity * 1000)**2 / 4.184e12  # kilotons
+                    impact_energies.append(impact_energy)
+                
+                # Create dataframe
+                impacts_df = pd.DataFrame({
+                    'lat': impact_lats,
+                    'lon': impact_longs,
+                    'size': impact_sizes,
+                    'energy': impact_energies
+                })
+                
+                # Create map
+                fig = px.scatter_geo(
+                    impacts_df, 
+                    lat='lat', 
+                    lon='lon',
+                    size='size',
+                    color='energy',
+                    hover_name='energy',
+                    hover_data={'lat': True, 'lon': True, 'size': True, 'energy': ':.2f kt'},
+                    title="Predicted Fragment Impact Locations",
+                    projection='natural earth',
+                    color_continuous_scale='Viridis'
+                )
+                
+                fig.update_layout(
+                    coloraxis_colorbar=dict(
+                        title="Energy (kt)"
+                    )
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Damage assessment
+                total_energy = sum(impact_energies)
+                
+                st.markdown(f"""
+                <div style='background-color: rgba(240, 240, 240, 0.5); border-radius: 10px; padding: 15px; margin-top: 20px; border-left: 6px solid #9C27B0;'>
+                    <h4 style='color: #000000; margin-top:0;'>Impact Assessment</h4>
+                    <p style='color: #000000;'>
+                    The collision would produce approximately <b>{num_fragments}</b> fragments, with <b>{earth_bound_fragments}</b> 
+                    potentially on Earth-intercept trajectories. The fragments would reach Earth in approximately <b>{time_to_earth:.1f}</b> days.
+                    </p>
+                    <p style='color: #000000;'>
+                    The total combined energy of all Earth impacts would be approximately <b>{total_energy:.2f}</b> kilotons of TNT.
+                    Impacts are distributed across multiple locations, reducing the catastrophic effect of a single impact.
+                    </p>
+                    <p style='color: #000000;'>
+                    The largest potential fragment has a diameter of <b>{largest_fragment_size:.1f}</b> meters, which would create
+                    a crater approximately <b>{largest_fragment_size * 10:.1f}</b> meters in diameter if it impacts land.
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+    
     # Data Explorer Tab
     with tabs[5]:
         st.subheader("Raw Data Explorer")
