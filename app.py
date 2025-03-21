@@ -25,6 +25,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Force light theme
+st.markdown("""
+<script>
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
+</script>
+""", unsafe_allow_html=True)
+
 # NASA API Key
 NASA_API_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
 
@@ -34,8 +42,23 @@ def apply_theme_styling():
     st.markdown("""
     <style>
     .main {
-        background-color: #FFFFFF;
-        color: #000000; /* Black text color for light mode */
+        background-color: #FFFFFF !important;
+        color: #000000 !important; /* Black text color for light mode */
+    }
+    .stApp {
+        background-color: #FFFFFF !important;
+    }
+    body {
+        background-color: #FFFFFF !important;
+    }
+    .css-1d391kg, .css-1v3fvcr, .css-18e3th9, .css-1inwz65 {
+        background-color: #FFFFFF !important;
+    }
+    .sidebar .sidebar-content {
+        background-color: #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF !important;
     }
     .stButton>button {
         background-color: #F0F2F6;
