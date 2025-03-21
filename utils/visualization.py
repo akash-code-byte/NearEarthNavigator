@@ -501,6 +501,8 @@ def create_3d_asteroid_visualization(df, map_type='3d'):
     -----------
     df : pandas.DataFrame
         DataFrame with asteroid data
+    map_type : str
+        Type of visualization ('3d' or 'global')
         
     Returns:
     --------
