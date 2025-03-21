@@ -8,6 +8,7 @@ def plot_asteroids(df):
     """
     Create a scatter plot of asteroids showing miss distance vs. relative velocity
     
+    """
     Parameters:
     -----------
     df : pandas.DataFrame
