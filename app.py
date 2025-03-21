@@ -794,10 +794,21 @@ if 'neo_df' in st.session_state:
     with tabs[1]:
         st.subheader("Advanced Visualizations")
         
-        viz_type = st.radio(
+        # Visualization selector using session state to maintain selection
+        viz_options = ["Asteroid Distribution", "3D Space Visualization", "Trajectory Analysis", "Time Series Analysis", "Close Approach Map"]
+        
+        # This ensures the visualization type is maintained when switching tabs
+        selected_viz = st.radio(
             "Select Visualization Type",
-            ["Asteroid Distribution", "3D Space Visualization", "Trajectory Analysis", "Time Series Analysis", "Close Approach Map"]
+            viz_options,
+            index=viz_options.index(st.session_state.viz_type) if st.session_state.viz_type in viz_options else 0
         )
+        
+        # Update session state with selected visualization
+        st.session_state.viz_type = selected_viz
+        
+        # Use the selected visualization type
+        viz_type = selected_viz
         
         if viz_type == "Asteroid Distribution":
             # Distribution visualization
