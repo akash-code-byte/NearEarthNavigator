@@ -112,20 +112,20 @@ def apply_theme_styling():
         <style>
         .main {
             background-color: #FFFFFF;
-            color: #31333F;
+            color: #4CAF50; /* Green text color for light mode */
         }
         .stButton>button {
             background-color: #F0F2F6;
-            color: #31333F;
-            border: 1px solid #D2D6DE;
+            color: #4CAF50; /* Green text color for buttons */
+            border: 1px solid #4CAF50; /* Green border */
             border-radius: 4px;
             padding: 0.5rem 1rem;
             font-weight: 500;
             transition: all 0.3s ease;
         }
         .stButton>button:hover {
-            background-color: #E2E8F0;
-            border-color: #C0C7D1;
+            background-color: #E2F0E3; /* Light green hover */
+            border-color: #3E8E41;
         }
         .stButton>button[kind="primary"] {
             background-color: #4CAF50;
@@ -137,16 +137,18 @@ def apply_theme_styling():
         }
         .stTextInput>div>div>input, .stNumberInput>div>div>input {
             background-color: #F0F2F6;
-            color: #31333F;
+            color: #4CAF50; /* Green text color */
             border-radius: 4px;
+            border: 1px solid #4CAF50; /* Green border */
         }
         .stSelectbox>div>div {
             background-color: #F0F2F6;
-            color: #31333F;
+            color: #4CAF50; /* Green text color */
             border-radius: 4px;
+            border: 1px solid #4CAF50; /* Green border */
         }
         .st-br {
-            border-color: #D2D6DE;
+            border-color: #4CAF50; /* Green border */
         }
         .stTabs [data-baseweb="tab-list"] {
             gap: 2px;
@@ -154,6 +156,7 @@ def apply_theme_styling():
         .stTabs [data-baseweb="tab"] {
             border-radius: 4px 4px 0 0;
             padding: 0.5rem 1rem;
+            color: #4CAF50; /* Green text color */
         }
         .stTabs [aria-selected="true"] {
             background-color: #4CAF50;
@@ -165,13 +168,34 @@ def apply_theme_styling():
             padding: 1rem;
             border-radius: 0.5rem;
             margin-bottom: 1rem;
+            color: #4CAF50; /* Green text color */
         }
         .alert-box {
             background-color: #F0F2F6;
-            border-left: 4px solid #F44336;
+            border-left: 4px solid #4CAF50; /* Changed to green */
             padding: 1rem;
             border-radius: 0.5rem;
             margin-bottom: 1rem;
+            color: #4CAF50; /* Green text color */
+        }
+        /* Additional styling for all text elements */
+        p, h1, h2, h3, h4, h5, h6, span, div, label, th, td {
+            color: #4CAF50 !important; /* Enforce green text everywhere */
+        }
+        /* Style for dataframes */
+        .dataframe {
+            color: #4CAF50;
+        }
+        .dataframe th {
+            background-color: #E8F5E9 !important;
+            color: #2E7D32 !important;
+        }
+        .dataframe td {
+            color: #4CAF50 !important;
+        }
+        /* Radio buttons and checkboxes */
+        .stRadio label, .stCheckbox label {
+            color: #4CAF50 !important;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -323,10 +347,10 @@ with st.sidebar:
 # Main content area
 col1, col2 = st.columns([10, 2])
 with col1:
-    st.markdown("<h1 style='font-size:2.0em; color:#2E86C1;'>Comprehensive Space Threat Assessment and Prediction System</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:1.2em; margin-bottom:20px;'>An advanced asteroid analysis platform for tracking, visualizing, and predicting hazards from Near Earth Objects</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='font-size:2.0em; color:#4CAF50;'>Comprehensive Space Threat Assessment and Prediction System</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:1.2em; margin-bottom:20px; color:#4CAF50;'>An advanced asteroid analysis platform for tracking, visualizing, and predicting hazards from Near Earth Objects</p>", unsafe_allow_html=True)
     st.markdown("""
-    <div style='font-size:0.9em; color:#888; margin-bottom:20px;'>
+    <div style='font-size:0.9em; color:#4CAF50; margin-bottom:20px;'>
     Advanced monitoring and prediction platform for near-Earth objects, providing threat analysis, 
     impact simulations, and risk assessment for potential hazardous asteroids approaching Earth.
     </div>
@@ -342,16 +366,16 @@ with col2:
 st.markdown("""
 <style>
 .info-box {
-    background-color: rgba(25, 118, 210, 0.05);
+    background-color: rgba(76, 175, 80, 0.05);
     border-radius: 10px;
     padding: 20px;
     margin: 20px 0;
-    border-left: 6px solid #1976D2;
+    border-left: 6px solid #4CAF50;
 }
 </style>
 <div class="info-box">
-    <h3 style="color: #1976D2; margin-top:0;">About Space Threat Assessment</h3>
-    <p>
+    <h3 style="color: #4CAF50; margin-top:0;">About Space Threat Assessment</h3>
+    <p style="color: #4CAF50;">
     This application analyzes Near-Earth Objects (NEOs) to identify potentially hazardous asteroids
     that could pose a threat to Earth. By leveraging NASA's NEO database and advanced machine
     learning algorithms, the system provides comprehensive risk assessment and predictive analytics.
@@ -690,21 +714,27 @@ if 'neo_df' in st.session_state:
         if 'hazard_probability' in df.columns:
             st.subheader("Feature Correlation with Hazard Probability")
             
-            # Calculate correlations with hazard_probability
-            correlation_df = pd.DataFrame(df[feature_list].corrwith(df['hazard_probability']))
-            correlation_df.columns = ['correlation']
-            correlation_df = correlation_df.sort_values('correlation', ascending=False)
+            # Create a numeric-only DataFrame for correlation calculation
+            numeric_cols = df[feature_list].select_dtypes(include=['float64', 'int64']).columns.tolist()
+            # Skip if there are no numeric columns to correlate
+            if len(numeric_cols) > 0:
+                # Calculate correlations with hazard_probability
+                correlation_df = pd.DataFrame(df[numeric_cols].corrwith(df['hazard_probability']))
+                correlation_df.columns = ['correlation']
+                correlation_df = correlation_df.sort_values('correlation', ascending=False)
             
-            fig = px.bar(
-                correlation_df,
-                x=correlation_df.index,
-                y='correlation',
-                title="Correlation with Hazard Probability",
-                color='correlation',
-                color_continuous_scale='RdBu_r'
-            )
-            fig.update_layout(xaxis_title="Feature", yaxis_title="Correlation")
-            st.plotly_chart(fig, use_container_width=True)
+                fig = px.bar(
+                    correlation_df,
+                    x=correlation_df.index,
+                    y='correlation',
+                    title="Correlation with Hazard Probability",
+                    color='correlation',
+                    color_continuous_scale='RdBu_r'
+                )
+                fig.update_layout(xaxis_title="Feature", yaxis_title="Correlation")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No numeric features available for correlation analysis.")
     
     # Data Explorer Tab
     with tabs[4]:
@@ -809,7 +839,7 @@ if export_button and 'neo_df' in st.session_state:
 # Show application information at the bottom
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #888; font-size: 0.8em;">
+<div style="text-align: center; color: #4CAF50; font-size: 0.8em;">
     <p>Comprehensive Space Threat Assessment and Prediction System | Using NASA NEO API</p>
     <p>Data refreshed: {}</p>
 </div>
