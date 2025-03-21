@@ -707,7 +707,8 @@ if 'neo_df' in st.session_state:
             fig = px.histogram(df, x="absolute_magnitude", 
                              labels={"absolute_magnitude": "Absolute Magnitude (H)"},
                              color_discrete_sequence=['#4CAF50'],
-                             opacity=0.8)
+                             opacity=0.8,
+                             nbins=15)  # Control number of bins to prevent overcrowding
             
             fig.update_layout(
                 showlegend=False,
@@ -716,7 +717,9 @@ if 'neo_df' in st.session_state:
                 paper_bgcolor='rgba(0,0,0,0)',
                 xaxis=dict(
                     title_font=dict(size=14),
-                    gridcolor='rgba(220,220,220,0.5)'
+                    gridcolor='rgba(220,220,220,0.5)',
+                    tickangle=-45,  # Angle the labels
+                    tickformat=".1f"  # Format the tick values
                 ),
                 yaxis=dict(
                     title="Count",
@@ -736,7 +739,8 @@ if 'neo_df' in st.session_state:
             fig = px.histogram(df, x="estimated_diameter_max", 
                              labels={"estimated_diameter_max": "Maximum Estimated Diameter (km)"},
                              color_discrete_sequence=['#2196F3'],
-                             opacity=0.8)
+                             opacity=0.8,
+                             nbins=15)  # Control number of bins to prevent overcrowding
             
             fig.update_layout(
                 showlegend=False,
@@ -745,7 +749,9 @@ if 'neo_df' in st.session_state:
                 paper_bgcolor='rgba(0,0,0,0)',
                 xaxis=dict(
                     title_font=dict(size=14),
-                    gridcolor='rgba(220,220,220,0.5)'
+                    gridcolor='rgba(220,220,220,0.5)',
+                    tickangle=-45,  # Angle the labels
+                    tickformat=".2f"  # Format the tick values
                 ),
                 yaxis=dict(
                     title="Count",
@@ -774,7 +780,7 @@ if 'neo_df' in st.session_state:
         
         viz_type = st.radio(
             "Select Visualization Type",
-            ["Asteroid Distribution", "3D Space Visualization", "Trajectory Analysis", "Time Series Analysis"]
+            ["Asteroid Distribution", "3D Space Visualization", "Trajectory Analysis", "Time Series Analysis", "Close Approach Map"]
         )
         
         if viz_type == "Asteroid Distribution":
@@ -1654,7 +1660,7 @@ if 'neo_df' in st.session_state:
                 
                 anim_df = pd.DataFrame(anim_data)
                 
-                # Create animation
+                # Create animation - fixed implementation
                 fig = px.scatter_3d(
                     anim_df, x='x', y='y', z='z',
                     animation_frame='frame',
@@ -1665,21 +1671,18 @@ if 'neo_df' in st.session_state:
                     title="Fragments Approaching Earth Over Time"
                 )
                 
-                # Add Earth at the end point
-                for i in range(frames):
-                    fig.add_trace(
-                        go.Scatter3d(
-                            x=[earth_distance], y=[0], z=[0],
-                            mode='markers',
-                            marker=dict(
-                                size=15,
-                                color='blue'
-                            ),
-                            name='Earth',
-                            showlegend=(i == 0)
+                # Add Earth at a fixed position (without animation frames which caused the error)
+                fig.add_trace(
+                    go.Scatter3d(
+                        x=[earth_distance], y=[0], z=[0],
+                        mode='markers',
+                        marker=dict(
+                            size=15,
+                            color='blue'
                         ),
-                        frame=f"{i}"
+                        name='Earth'
                     )
+                )
                 
                 # Update layout
                 fig.update_layout(
