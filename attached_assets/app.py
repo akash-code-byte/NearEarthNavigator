@@ -1,4 +1,5 @@
 import os
+import time
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -24,157 +25,338 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# NASA API Key
-NASA_API_KEY = os.environ.get("NASA_API_KEY", "yl3iawXawys50GTGtKdzQ9TmbKlJpmoptjC8Shqb")
+# Force light theme
+st.markdown("""
+<script>
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
+</script>
+""", unsafe_allow_html=True)
 
-# Theme configuration (Dark/Light mode)
-if 'theme' not in st.session_state:
-    st.session_state.theme = "dark"  # Default to dark theme
+# NASA API Key - Set to provided API key 
+NASA_API_KEY = "yl3iawXawys50GTGtKdzQ9TmbKlJpmoptjC8Shqb"
 
-# Function to apply theme styling
+# Initialize session state
+if 'show_advanced' not in st.session_state:
+    st.session_state.show_advanced = False
+if 'trained_model' not in st.session_state:
+    st.session_state.trained_model = None
+if 'model_metrics' not in st.session_state:
+    st.session_state.model_metrics = None
+if 'feature_importance' not in st.session_state:
+    st.session_state.feature_importance = None
+if 'model_type' not in st.session_state:
+    st.session_state.model_type = None
+if 'model_params' not in st.session_state:
+    st.session_state.model_params = None
+if 'viz_type' not in st.session_state:
+    st.session_state.viz_type = "Asteroid Distribution"
+
+# Function to apply theme styling - permanently using light theme with black text and enhanced UI
 def apply_theme_styling():
-    if st.session_state.theme == "dark":
-        # Apply dark theme styling
-        st.markdown("""
-        <style>
-        .main {
-            background-color: #0E1117;
-            color: #FAFAFA;
-        }
-        .stButton>button {
-            background-color: #2196F3; /* Blue buttons */
-            color: white;
-            border: 1px solid #1E88E5;
-            border-radius: 4px;
-            padding: 0.5rem 1rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .stButton>button:hover {
-            background-color: #1976D2;
-            border-color: #1565C0;
-            box-shadow: 0 3px 7px rgba(0,0,0,0.3);
-        }
-        .stButton>button[kind="primary"] {
-            background-color: #4CAF50; /* Green for primary buttons */
-            border-color: #43A047;
-            color: white;
-        }
-        .stButton>button[kind="primary"]:hover {
-            background-color: #388E3C;
-            box-shadow: 0 3px 7px rgba(0,0,0,0.3);
-        }
-        .stTextInput>div>div>input, .stNumberInput>div>div>input {
-            background-color: #262730;
-            color: #FAFAFA;
-            border-radius: 4px;
-        }
-        .stSelectbox>div>div {
-            background-color: #262730;
-            color: #FAFAFA;
-            border-radius: 4px;
-        }
-        .st-br {
-            border-color: #4B4F5A;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 2px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 4px 4px 0 0;
-            padding: 0.5rem 1rem;
-            background-color: #262730;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .info-box {
-            background-color: #262730;
-            border-left: 4px solid #4CAF50;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .alert-box {
-            background-color: #262730;
-            border-left: 4px solid #F44336;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-    else:
-        # Apply light theme styling
-        st.markdown("""
-        <style>
-        .main {
-            background-color: #FFFFFF;
-            color: #31333F;
-        }
-        .stButton>button {
-            background-color: #F0F2F6;
-            color: #31333F;
-            border: 1px solid #D2D6DE;
-            border-radius: 4px;
-            padding: 0.5rem 1rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .stButton>button:hover {
-            background-color: #E2E8F0;
-            border-color: #C0C7D1;
-        }
-        .stButton>button[kind="primary"] {
-            background-color: #4CAF50;
-            color: white;
-            border-color: #3E8E41;
-        }
-        .stButton>button[kind="primary"]:hover {
-            background-color: #3E8E41;
-        }
-        .stTextInput>div>div>input, .stNumberInput>div>div>input {
-            background-color: #F0F2F6;
-            color: #31333F;
-            border-radius: 4px;
-        }
-        .stSelectbox>div>div {
-            background-color: #F0F2F6;
-            color: #31333F;
-            border-radius: 4px;
-        }
-        .st-br {
-            border-color: #D2D6DE;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 2px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 4px 4px 0 0;
-            padding: 0.5rem 1rem;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .info-box {
-            background-color: #F0F2F6;
-            border-left: 4px solid #4CAF50;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .alert-box {
-            background-color: #F0F2F6;
-            border-left: 4px solid #F44336;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+    # Apply enhanced light theme styling with black text (this is permanent - no toggle button)
+    st.markdown("""
+    <style>
+    /* Base styling */
+    .main {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
+    }
+    .stApp {
+        background-color: #FFFFFF !important;
+    }
+    body {
+        background-color: #FFFFFF !important;
+    }
+    
+    /* Text styling */
+    p, h1, h2, h3, h4, h5, h6, span, div, label, th, td {
+        color: #000000 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
+    }
+    
+    h1 {
+        font-weight: 600 !important;
+        letter-spacing: -0.5px !important;
+    }
+    
+    h2, h3 {
+        font-weight: 500 !important;
+    }
+    
+    /* Sidebar and containers */
+    .css-1d391kg, .css-1v3fvcr, .css-18e3th9, .css-1inwz65 {
+        background-color: #FFFFFF !important;
+    }
+    
+    .sidebar .sidebar-content {
+        background-color: #F8F9FA !important;
+    }
+    
+    [data-testid="stSidebar"] {
+        background-color: #F8F9FA !important;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05) !important;
+        border-right: 1px solid #EAECEF !important;
+        padding: 1.5rem !important;
+    }
+    
+    /* Card styling */
+    [data-testid="stVerticalBlock"] {
+        border-radius: 8px !important;
+    }
+    
+    /* Card hover effect */
+    .stCard {
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    
+    .stCard:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Buttons */
+    .stButton>button {
+        background-color: #F8F9FA !important;
+        color: #000000 !important;
+        border: 1px solid #E0E3E7 !important;
+        border-radius: 6px !important;
+        padding: 0.5rem 1.2rem !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .stButton>button:hover {
+        background-color: #EAECEF !important;
+        border-color: #CED4DA !important;
+        transform: translateY(-1px) !important;
+    }
+    
+    .stButton>button[kind="primary"] {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border-color: #3E8E41 !important;
+        box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3) !important;
+    }
+    
+    .stButton>button[kind="primary"]:hover {
+        background-color: #3E8E41 !important;
+    }
+    
+    /* Input fields */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        background-color: #F8F9FA !important;
+        color: #000000 !important;
+        border-radius: 6px !important;
+        border: 1px solid #E0E3E7 !important;
+        padding: 0.75rem !important;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
+        border-color: #4CAF50 !important;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2) !important;
+    }
+    
+    /* Selectbox */
+    .stSelectbox>div>div {
+        background-color: #F8F9FA !important;
+        color: #000000 !important;
+        border-radius: 6px !important;
+        border: 1px solid #E0E3E7 !important;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    
+    .stSelectbox>div:hover {
+        border-color: #CED4DA !important;
+    }
+    
+    .stSelectbox>div[data-baseweb="select"] > div {
+        background-color: #F8F9FA !important;
+    }
+    
+    /* Dividers */
+    .st-br {
+        border-color: #EAECEF !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px !important;
+        border-bottom: 1px solid #EAECEF !important;
+        padding-bottom: 0 !important;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 6px 6px 0 0 !important;
+        padding: 0.6rem 1.2rem !important;
+        color: #000000 !important;
+        font-weight: 500 !important;
+        background-color: #F8F9FA !important;
+        border: 1px solid #EAECEF !important;
+        border-bottom: none !important;
+        margin-bottom: -1px !important;
+        transition: background-color 0.2s ease !important;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #F0F2F6 !important;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border-color: #4CAF50 !important;
+    }
+    
+    /* Info boxes */
+    .info-box {
+        background-color: #F8F9FA !important;
+        border-left: 4px solid #4CAF50 !important;
+        padding: 1.2rem !important;
+        border-radius: 8px !important;
+        margin-bottom: 1.5rem !important;
+        color: #000000 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .alert-box {
+        background-color: #F8F9FA !important;
+        border-left: 4px solid #4CAF50 !important;
+        padding: 1.2rem !important;
+        border-radius: 8px !important;
+        margin-bottom: 1.5rem !important;
+        color: #000000 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    /* Charts and dataframes */
+    .js-plotly-plot {
+        border-radius: 8px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+        padding: 1rem !important;
+        background-color: #FFFFFF !important;
+    }
+    
+    .dataframe {
+        color: #000000 !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .dataframe th {
+        background-color: #F0F2F6 !important;
+        color: #000000 !important;
+        padding: 12px 15px !important;
+        text-align: left !important;
+        border-bottom: 1px solid #EAECEF !important;
+        font-weight: 600 !important;
+    }
+    
+    .dataframe td {
+        color: #000000 !important;
+        padding: 10px 15px !important;
+        border-bottom: 1px solid #EAECEF !important;
+    }
+    
+    .dataframe tr:nth-child(even) {
+        background-color: #F8F9FA !important;
+    }
+    
+    .dataframe tr:hover {
+        background-color: #F0F2F6 !important;
+    }
+    
+    /* Radio buttons and checkboxes */
+    .stRadio label, .stCheckbox label {
+        color: #000000 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Metrics */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem !important;
+        font-weight: 600 !important;
+        color: #4CAF50 !important;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-weight: 500 !important;
+    }
+    
+    /* Plotly chart enhancements */
+    .js-plotly-plot .plotly .main-svg {
+        border-radius: 8px !important;
+    }
+    
+    /* Animations */
+    .stButton>button, .stSelectbox>div, .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        transition: all 0.3s ease !important;
+    }
+    
+    /* Modern scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px !important;
+        height: 8px !important;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #F8F9FA !important;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #CED4DA !important;
+        border-radius: 4px !important;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #ADB5BD !important;
+    }
+    
+    /* Container for dashboard items */
+    .dashboard-container {
+        background-color: #F8F9FA !important;
+        border-radius: 10px !important;
+        padding: 20px !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    /* Tooltip styling */
+    .tooltip {
+        position: relative !important;
+        display: inline-block !important;
+        cursor: pointer !important;
+    }
+    
+    .tooltip .tooltiptext {
+        visibility: hidden !important;
+        width: 200px !important;
+        background-color: #555 !important;
+        color: #fff !important;
+        text-align: center !important;
+        border-radius: 6px !important;
+        padding: 10px !important;
+        position: absolute !important;
+        z-index: 1 !important;
+        bottom: 125% !important;
+        left: 50% !important;
+        margin-left: -100px !important;
+        opacity: 0 !important;
+        transition: opacity 0.3s !important;
+    }
+    
+    .tooltip:hover .tooltiptext {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Apply theme styling
 apply_theme_styling()
@@ -182,6 +364,16 @@ apply_theme_styling()
 # Initialize session state for advanced settings
 if 'show_advanced' not in st.session_state:
     st.session_state.show_advanced = False
+
+# Initialize session state for model cache
+if 'trained_model' not in st.session_state:
+    st.session_state.trained_model = None
+    st.session_state.model_metrics = None
+    st.session_state.feature_importance = None
+
+# Initialize session state for visualizations
+if 'visualizations' not in st.session_state:
+    st.session_state.visualizations = {}
 
 # Sidebar for inputs
 with st.sidebar:
@@ -310,22 +502,51 @@ with st.sidebar:
     )
     export_button = st.button("Export Data", key="fancy_export_button")
 
-# Main content area
-col1, col2 = st.columns([10, 2])
-with col1:
-    st.markdown("<h1 style='font-size:2.0em; color:#2E86C1;'>Comprehensive Space Threat Assessment and Prediction System</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:1.2em; margin-bottom:20px;'>An advanced asteroid analysis platform for tracking, visualizing, and predicting hazards from Near Earth Objects</p>", unsafe_allow_html=True)
-    st.markdown("""
-    <div style='font-size:0.9em; color:#888; margin-bottom:20px;'>
-    Advanced monitoring and prediction platform for near-Earth objects, providing threat analysis, 
-    impact simulations, and risk assessment for potential hazardous asteroids approaching Earth.
+# Main content area - Enhanced UI with modern dashboard layout
+st.markdown("""
+<div style="text-align: center; padding: 10px 0; margin-bottom: 20px;">
+    <h1 style='font-size: 2.5em; font-weight: 700; color: #000000; margin-bottom: 10px;'>
+        <span style="color: #4CAF50;">☄️</span> Comprehensive Space Threat Assessment
+    </h1>
+    <p style='font-size: 1.3em; color: #333333; max-width: 800px; margin: 0 auto 15px;'>
+        An advanced platform for tracking, visualizing, and predicting hazards from Near Earth Objects
+    </p>
+    <div style='width: 100px; height: 3px; background-color: #4CAF50; margin: 0 auto 25px;'></div>
+</div>
+""", unsafe_allow_html=True)
+
+# Create a modern dashboard-style info container
+st.markdown("""
+<div style="background-color: #F8F9FA; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);">
+    <div style="display: flex; align-items: flex-start;">
+        <div style="flex: 1;">
+            <h3 style="color: #000000; margin-top: 0; font-size: 1.3em; font-weight: 600;">About Space Threat Assessment</h3>
+            <p style="color: #000000; line-height: 1.6; margin-bottom: 15px;">
+                This application analyzes Near-Earth Objects (NEOs) to identify potentially hazardous asteroids
+                that could pose a threat to Earth. By leveraging NASA's NEO database and advanced machine
+                learning algorithms, the system provides comprehensive risk assessment and predictive analytics.
+            </p>
+            <div style="margin-top: 15px;">
+                <span style="background-color: rgba(76, 175, 80, 0.15); color: #2E7D32; padding: 5px 10px; border-radius: 15px; font-size: 0.9em; margin-right: 8px;">
+                    <strong>Real-time Data</strong>
+                </span>
+                <span style="background-color: rgba(33, 150, 243, 0.15); color: #1565C0; padding: 5px 10px; border-radius: 15px; font-size: 0.9em; margin-right: 8px;">
+                    <strong>ML Predictions</strong>
+                </span>
+                <span style="background-color: rgba(255, 152, 0, 0.15); color: #E65100; padding: 5px 10px; border-radius: 15px; font-size: 0.9em;">
+                    <strong>Impact Simulations</strong>
+                </span>
+            </div>
+        </div>
+        <div style="width: 160px; margin-left: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="background-color: rgba(76, 175, 80, 0.1); border-radius: 50%; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center;">
+                <div style="font-size: 40px;">☄️</div>
+            </div>
+            <div style="margin-top: 10px; text-align: center; font-weight: 500;">NASA data-driven</div>
+        </div>
     </div>
-    """, unsafe_allow_html=True)
-with col2:
-    # Set theme to light by default
-    if "theme" not in st.session_state:
-        st.session_state.theme = "light"
-        apply_theme_styling()
+</div>
+""", unsafe_allow_html=True)
 
 # Fetch data on button click or use cached data
 if fetch_button:
@@ -352,1290 +573,1694 @@ if fetch_button:
         else:
             st.error("Failed to fetch data from NASA API. Please try again.")
 
-# Add space threat assessment info box with custom styling
-st.markdown("""
-<style>
-.info-box {
-    background-color: rgba(25, 118, 210, 0.05);
-    border-radius: 10px;
-    padding: 20px;
-    margin: 20px 0;
-    border-left: 6px solid #1976D2;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.info-box h4 {
-    margin-top: 15px;
-    margin-bottom: 10px;
-    color: #333;
-    font-weight: 600;
-}
-.info-box ul {
-    margin-bottom: 15px;
-}
-</style>
-<div class="info-box">
-    <h4>Current Statistics (as of March 2025):</h4>
-    <ul>
-        <li>Over 31,000 NEOs cataloged by NASA</li>
-        <li>Approximately 2,300 potentially hazardous asteroids identified</li>
-        <li>Continuous monitoring through global observation networks</li>
-    </ul>
-    
-    <h4>Threat Classification System:</h4>
-    <ul>
-        <li><strong style="color:#4CAF50;">Low Risk</strong> - Objects with minimal chance of Earth impact</li>
-        <li><strong style="color:#FFC107;">Moderate Risk</strong> - Objects requiring continued observation</li>
-        <li><strong style="color:#FF5722;">High Risk</strong> - Objects with significant impact potential</li>
-        <li><strong style="color:#F44336;">Critical Risk</strong> - Objects requiring immediate attention and contingency planning</li>
-    </ul>
-</div>
-""", unsafe_allow_html=True)
-
-# Process and display data if available
+# Main tabs - Enhanced UI
 if 'neo_df' in st.session_state:
     df = st.session_state['neo_df']
     
-    # Display current threat assessment summary with custom styling
+    # Create a better-looking tab system with icons
     st.markdown("""
     <style>
-    .metrics-container {
-        background-color: rgba(25, 118, 210, 0.05);
-        border-radius: 10px;
-        padding: 15px;
-        margin: 20px 0;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-    .metrics-title {
-        font-weight: bold;
-        margin-bottom: 10px;
-        color: #1976D2;
-        font-size: 1.1em;
-        border-bottom: 1px solid rgba(25, 118, 210, 0.2);
-        padding-bottom: 5px;
-    }
-    div[data-testid="stMetricValue"] > div {
-        font-size: 1.8rem !important;
-        font-weight: bold !important;
-    }
-    div[data-testid="stMetricLabel"] {
-        font-size: 1rem !important;
+    .custom-tabs {
+        margin-top: 20px;
+        margin-bottom: 25px;
     }
     </style>
-    <div class="metrics-container">
-        <div class="metrics-title">Current Threat Assessment Summary</div>
-    </div>
     """, unsafe_allow_html=True)
     
-    threat_summary_col1, threat_summary_col2, threat_summary_col3, threat_summary_col4 = st.columns(4)
+    # Custom tab container
+    st.markdown('<div class="custom-tabs"></div>', unsafe_allow_html=True)
     
-    with threat_summary_col1:
-        st.metric("Objects Analyzed", len(df), delta=None)
+    # Define tab icons
+    tab_icons = {
+        "Overview": "📊",
+        "Visualizations": "🔍",
+        "Threat Assessment": "⚠️",
+        "Model Insights": "🧠",
+        "Impact Simulator": "💥",
+        "Data Explorer": "🔎"
+    }
     
-    with threat_summary_col2:
-        hazardous_count = df["is_potentially_hazardous"].sum() if "is_potentially_hazardous" in df.columns else 0
-        st.metric("Hazardous Objects", int(hazardous_count), delta=None)
+    # Create tab names with icons
+    tab_names = [f"{icon} {name}" for name, icon in tab_icons.items()]
     
-    with threat_summary_col3:
-        closest_distance = df["miss_distance"].min() if "miss_distance" in df.columns and len(df) > 0 else "N/A"
-        if isinstance(closest_distance, (int, float)):
-            formatted_distance = f"{closest_distance:,.0f} km"
-        else:
-            formatted_distance = "N/A"
-        st.metric("Closest Approach", formatted_distance, delta=None)
+    tabs = st.tabs(tab_names)
     
-    with threat_summary_col4:
-        largest_diameter = df["estimated_diameter_max"].max() if "estimated_diameter_max" in df.columns and len(df) > 0 else "N/A"
-        if isinstance(largest_diameter, (int, float)):
-            formatted_diameter = f"{largest_diameter:.2f} km"
-        else:
-            formatted_diameter = "N/A"
-        st.metric("Largest Object", formatted_diameter, delta=None)
-    
-    # Create tabs for different sections
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "Data Overview", 
-        "Threat Visualizations", 
-        "Predictive Models", 
-        "Impact Simulations",
-        "Risk Assessment"
-    ])
-    
-    with tab1:
-        st.header("Asteroid Dataset")
-        st.write(f"Total asteroids: {len(df)}")
+    # Overview Tab
+    with tabs[0]:
+        st.subheader("Near-Earth Object Overview")
         
-        # Display statistics
-        st.subheader("Dataset Statistics")
-        st.write(df.describe())
-        
-        # Display the dataframe
-        st.subheader("Raw Data")
-        st.dataframe(df)
-
-    with tab2:
-        st.header("Threat Visualization & Analysis")
-        
-        # Visualization type selector
-        vis_options = st.radio(
-            "Select Visualization Type",
-            ["Basic Scatter Plot", "3D Visualization", "Asteroid Trajectories", "Distribution Plots"]
-        )
-        
-        if vis_options == "Basic Scatter Plot":
-            st.subheader("Asteroid Distribution")
-            fig = plot_asteroids(df, "is_potentially_hazardous", "Asteroid Distribution", show_hazard_colors=True)
-            st.plotly_chart(fig, use_container_width=True, key="scatter_plot")
-            
-            st.subheader("Correlation Heatmap")
-            corr_fig = plot_correlation_heatmap(df)
-            st.plotly_chart(corr_fig, use_container_width=True, key="correlation_heatmap")
-            
-        elif vis_options == "3D Visualization":
-            st.subheader("3D Asteroid Visualization")
-            fig_3d = create_3d_asteroid_visualization(df)
-            st.plotly_chart(fig_3d, use_container_width=True, key="3d_visualization")
-            
-        elif vis_options == "Asteroid Trajectories":
-            st.subheader("Interactive Asteroid Trajectories")
-            trajectory_fig = create_interactive_asteroid_paths(df)
-            st.plotly_chart(trajectory_fig, use_container_width=True, key="trajectory_chart")
-            
-            st.markdown("""
-            This visualization shows the paths of asteroids relative to Earth. Each asteroid is positioned at its closest approach distance.
-            - **Red dots** represent potentially hazardous asteroids
-            - **Green dots** represent non-hazardous asteroids
-            - The concentric circles represent reference distances from Earth
-            - Hover over points for detailed information about each asteroid
-            """)
-            
-            # Provide a separate button to try the animation if desired
-            if st.button("Try Animation Version (may not work in all environments)", key="animation_btn"):
-                st.subheader("Asteroid Trajectory Animation")
-                animation_fig = create_asteroid_trajectory_animation(df)
-                st.plotly_chart(animation_fig, use_container_width=True, key="animation_chart")
-            
-        elif vis_options == "Distribution Plots":
-            st.subheader("Feature Distributions")
-            dist_fig = plot_feature_distributions(df)
-            st.plotly_chart(dist_fig, use_container_width=True, key="distribution_plots")
-
-    with tab3:
-        st.header("Predictive Modeling")
-        
-        # Train models button with custom styling
+        # Enhanced metrics with cards and icons
         st.markdown("""
         <style>
-        .train-model-container {
-            background-color: rgba(76, 175, 80, 0.1);
+        .metric-card {
+            background-color: white;
             border-radius: 10px;
-            padding: 15px;
-            margin: 20px 0;
-            border-left: 4px solid #4CAF50;
+            padding: 20px 15px;
             text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+            border-top: 4px solid #4CAF50;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        .metric-title {
+            font-size: 1rem;
+            color: #555;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .metric-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #4CAF50;
         }
         </style>
-        <div class="train-model-container">
-            <p style="font-size:0.9em; margin-bottom:10px;">
-            Train machine learning models to predict asteroid hazard potential based on physical characteristics
-            </p>
-        </div>
         """, unsafe_allow_html=True)
         
-        if st.button("Train Predictive Models", type="primary"):
-            with st.spinner("Training models... This may take a while."):
-                # Configure model training based on advanced settings if enabled
-                training_config = {}
-                
-                if st.session_state.show_advanced:
-                    if model_type == "Random Forest":
-                        training_config = {
-                            "n_estimators": n_estimators,
-                            "max_depth": max_depth
-                        }
-                    elif model_type == "XGBoost":
-                        training_config = {
-                            "learning_rate": learning_rate,
-                            "max_depth": max_depth
-                        }
-                    elif model_type == "Neural Network":
-                        training_config = {
-                            "hidden_layers": hidden_layers,
-                            "neurons_per_layer": neurons_per_layer
-                        }
-                    
-                    training_config["use_hyperopt"] = use_hyperopt
-                    if use_hyperopt:
-                        training_config["n_trials"] = n_trials
-                        training_config["optimizer"] = "optuna"
-                
-                best_model, model_metrics, feature_importance = train_and_evaluate_models(
-                    df, model_type=model_type, config=training_config
-                )
-                
-                if best_model:
-                    st.session_state['best_model'] = best_model
-                    st.session_state['model_metrics'] = model_metrics
-                    st.session_state['feature_importance'] = feature_importance
-                    st.success("✅ Models trained successfully!")
+        # Calculate metrics
+        total_objects = len(df)
+        potentially_hazardous = df['is_potentially_hazardous'].sum()
+        avg_miss_distance = df['miss_distance'].mean() / 1000000  # km
+        max_diameter = df['estimated_diameter_max'].max() * 1000  # meters
         
-        # Display model results if available
-        if 'best_model' in st.session_state and 'model_metrics' in st.session_state:
-            model_metrics = st.session_state['model_metrics']
-            
-            st.subheader("Model Performance Metrics")
-            
-            # Create metrics display
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Accuracy", f"{model_metrics['accuracy']:.4f}")
-            col2.metric("Precision", f"{model_metrics['precision']:.4f}")
-            col3.metric("Recall", f"{model_metrics['recall']:.4f}")
-            col4.metric("F1 Score", f"{model_metrics['f1']:.4f}")
-            
-            # Display feature importance
-            if 'feature_importance' in st.session_state:
-                st.subheader("Feature Importance")
-                try:
-                    importance_fig = plot_feature_importance(
-                        st.session_state['best_model'], 
-                        st.session_state['feature_importance']
-                    )
-                    if importance_fig is not None:
-                        st.plotly_chart(importance_fig, use_container_width=True, key="feature_importance")
-                    else:
-                        st.info("Feature importance visualization is not available for this model type.")
-                except Exception as e:
-                    st.error(f"Error generating feature importance plot: {str(e)}")
-            
-            # Plot ROC and PR curves
-            if 'y_test' in st.session_state and 'y_pred_proba' in st.session_state:
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.subheader("ROC Curve")
-                    try:
-                        roc_fig = plot_roc_curve(
-                            st.session_state['y_test'], 
-                            st.session_state['y_pred_proba']
-                        )
-                        if roc_fig is not None:
-                            st.plotly_chart(roc_fig, use_container_width=True, key="roc_curve")
-                        else:
-                            st.info("ROC curve could not be generated for this model.")
-                    except Exception as e:
-                        st.error(f"Error generating ROC curve: {str(e)}")
-                
-                with col2:
-                    st.subheader("Precision-Recall Curve")
-                    try:
-                        pr_fig = plot_precision_recall_curve(
-                            st.session_state['y_test'], 
-                            st.session_state['y_pred_proba']
-                        )
-                        if pr_fig is not None:
-                            st.plotly_chart(pr_fig, use_container_width=True, key="pr_curve")
-                        else:
-                            st.info("Precision-Recall curve could not be generated for this model.")
-                    except Exception as e:
-                        st.error(f"Error generating Precision-Recall curve: {str(e)}")
-
-    with tab4:
-        st.header("Impact Simulation & Risk Assessment")
+        # Create 4 columns
+        col1, col2, col3, col4 = st.columns(4)
         
-        # Create three simulation options
-        simulation_type = st.radio(
-            "Select Simulation Type",
-            ["Single Asteroid Impact", "Asteroid Collision", "Asteroid Fragments"],
-            horizontal=True
+        # Custom metric cards with icons
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon">🔭</div>
+                <div class="metric-title">Total NEOs</div>
+                <div class="metric-value">{total_objects}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top-color: #FF5722;">
+                <div class="metric-icon" style="color: #FF5722;">⚠️</div>
+                <div class="metric-title">Potentially Hazardous</div>
+                <div class="metric-value" style="color: #FF5722;">{potentially_hazardous}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top-color: #2196F3;">
+                <div class="metric-icon" style="color: #2196F3;">📏</div>
+                <div class="metric-title">Avg. Miss Distance</div>
+                <div class="metric-value" style="color: #2196F3;">{avg_miss_distance:.2f}<span style="font-size: 1rem;"> M km</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top-color: #9C27B0;">
+                <div class="metric-icon" style="color: #9C27B0;">📊</div>
+                <div class="metric-title">Max Diameter</div>
+                <div class="metric-value" style="color: #9C27B0;">{max_diameter:.1f}<span style="font-size: 1rem;"> m</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Enhanced distribution plots with card styling
+        st.markdown("""
+        <style>
+        .chart-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            border-left: 5px solid #4CAF50;
+        }
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        st.markdown('<h3 style="margin-top:30px; margin-bottom:20px; font-size:1.5rem;">NEO Distribution Analysis</h3>', unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown('<div class="chart-card" style="border-left-color: #4CAF50;">', unsafe_allow_html=True)
+            st.markdown('<div class="chart-title">Distribution of Absolute Magnitude</div>', unsafe_allow_html=True)
+            
+            fig = px.histogram(df, x="absolute_magnitude", 
+                             labels={"absolute_magnitude": "Absolute Magnitude (H)"},
+                             color_discrete_sequence=['#4CAF50'],
+                             opacity=0.8,
+                             nbins=15)  # Control number of bins to prevent overcrowding
+            
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(l=40, r=40, t=30, b=40),
+                plot_bgcolor='rgba(248,249,250,0.5)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(
+                    title_font=dict(size=14),
+                    gridcolor='rgba(220,220,220,0.5)',
+                    tickangle=-45,  # Angle the labels
+                    tickformat=".1f"  # Format the tick values
+                ),
+                yaxis=dict(
+                    title="Count",
+                    title_font=dict(size=14),
+                    gridcolor='rgba(220,220,220,0.5)'
+                ),
+                bargap=0.05
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown('<div class="chart-card" style="border-left-color: #2196F3;">', unsafe_allow_html=True)
+            st.markdown('<div class="chart-title">Distribution of Estimated Diameter</div>', unsafe_allow_html=True)
+            
+            fig = px.histogram(df, x="estimated_diameter_max", 
+                             labels={"estimated_diameter_max": "Maximum Estimated Diameter (km)"},
+                             color_discrete_sequence=['#2196F3'],
+                             opacity=0.8,
+                             nbins=15)  # Control number of bins to prevent overcrowding
+            
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(l=40, r=40, t=30, b=40),
+                plot_bgcolor='rgba(248,249,250,0.5)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(
+                    title_font=dict(size=14),
+                    gridcolor='rgba(220,220,220,0.5)',
+                    tickangle=-45,  # Angle the labels
+                    tickformat=".2f"  # Format the tick values
+                ),
+                yaxis=dict(
+                    title="Count",
+                    title_font=dict(size=14),
+                    gridcolor='rgba(220,220,220,0.5)'
+                ),
+                bargap=0.05
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Overview map of asteroids
+        st.subheader("Miss Distance vs. Relative Velocity")
+        fig = plot_asteroids(df)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Hazardous asteroids
+        st.subheader("Top 3 Potentially Hazardous Asteroids")
+        fig = visualize_top_3_hazardous_asteroids(df)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Visualizations Tab
+    with tabs[1]:
+        st.subheader("Advanced Visualizations")
+        
+        # Visualization selector using session state to maintain selection
+        if 'viz_type' not in st.session_state:
+            st.session_state.viz_type = "Asteroid Distribution"
+            
+        viz_options = ["Asteroid Distribution", "3D Space Visualization", "Trajectory Analysis", 
+                      "Time Series Analysis", "Close Approach Map", "Model Comparison"]
+        
+        selected_viz = st.radio(
+            "Select Visualization Type",
+            viz_options,
+            key='viz_radio',
+            index=viz_options.index(st.session_state.viz_type)
         )
         
-        if simulation_type == "Single Asteroid Impact":
-            st.subheader("Asteroid Impact Simulation")
-            
-            # Impact simulator inputs
-            st.write("Simulate the impact of an asteroid with Earth")
-            
-        elif simulation_type == "Asteroid Collision":
-            st.subheader("Asteroid Collision Simulation")
-            
-            # Asteroid collision simulator inputs
-            st.write("Simulate a collision between two asteroids and its consequences")
-            
-            # Create two columns for input form
-            collision_col1, collision_col2 = st.columns(2)
-            
-            with collision_col1:
-                # Inputs for first asteroid
-                st.markdown("#### First Asteroid")
-                asteroid1_diameter = st.number_input(
-                    "Diameter (meters)", 
-                    min_value=1.0, 
-                    max_value=5000.0, 
-                    value=100.0,
-                    step=10.0,
-                    key="ast1_diam"
-                )
-                
-                asteroid1_density = st.number_input(
-                    "Density (kg/m³)",
-                    min_value=1000.0,
-                    max_value=8000.0,
-                    value=3000.0,
-                    step=500.0,
-                    key="ast1_dens"
-                )
-                
-                asteroid1_velocity = st.number_input(
-                    "Velocity (km/s)",
-                    min_value=1.0,
-                    max_value=72.0,
-                    value=15.0,
-                    step=1.0,
-                    key="ast1_vel"
-                )
-            
-            with collision_col2:
-                # Inputs for second asteroid
-                st.markdown("#### Second Asteroid")
-                asteroid2_diameter = st.number_input(
-                    "Diameter (meters)", 
-                    min_value=1.0, 
-                    max_value=5000.0, 
-                    value=80.0,
-                    step=10.0,
-                    key="ast2_diam"
-                )
-                
-                asteroid2_density = st.number_input(
-                    "Density (kg/m³)",
-                    min_value=1000.0,
-                    max_value=8000.0,
-                    value=2500.0,
-                    step=500.0,
-                    key="ast2_dens"
-                )
-                
-                asteroid2_velocity = st.number_input(
-                    "Velocity (km/s)",
-                    min_value=1.0,
-                    max_value=72.0,
-                    value=18.0,
-                    step=1.0,
-                    key="ast2_vel"
-                )
-            
-            # Collision angle
-            collision_angle = st.slider(
-                "Collision Angle (degrees)",
-                min_value=0,
-                max_value=180,
-                value=45,
-                help="0° = head-on collision, 90° = perpendicular, 180° = rear-end collision"
-            )
-            
-            # Distance from Earth
-            distance_from_earth = st.number_input(
-                "Distance from Earth (million km)",
-                min_value=0.1,
-                max_value=150.0,
-                value=10.0,
-                step=1.0
-            )
-            
-            # Run collision simulation button with custom styling
-            st.markdown("""
-            <style>
-            .collision-container {
-                background-color: rgba(156, 39, 176, 0.1);
-                border-radius: 10px;
-                padding: 15px;
-                margin: 20px 0;
-                border-left: 4px solid #9C27B0;
-                text-align: center;
-            }
-            </style>
-            <div class="collision-container">
-                <p style="font-size:0.9em; margin-bottom:10px;">
-                Simulate an asteroid collision in space and calculate the resulting fragments and trajectories
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if st.button("Run Collision Simulation", type="primary", key="collision_btn"):
-                # Calculate asteroid masses
-                volume1 = (4/3) * np.pi * ((asteroid1_diameter / 2) ** 3)
-                mass1 = volume1 * asteroid1_density
-                
-                volume2 = (4/3) * np.pi * ((asteroid2_diameter / 2) ** 3)
-                mass2 = volume2 * asteroid2_density
-                
-                # Convert velocities to m/s
-                velocity1_ms = asteroid1_velocity * 1000
-                velocity2_ms = asteroid2_velocity * 1000
-                
-                # Calculate momenta
-                momentum1 = mass1 * velocity1_ms
-                momentum2 = mass2 * velocity2_ms
-                
-                # Calculate collision energy
-                relative_velocity = abs(velocity1_ms - velocity2_ms)
-                collision_factor = np.sin(np.radians(collision_angle / 2))  # Factor based on collision angle
-                collision_energy = 0.5 * (mass1 + mass2) * (relative_velocity * collision_factor) ** 2
-                
-                # Convert to kilotons of TNT
-                collision_energy_kt = collision_energy / 4.184e12
-                
-                # Estimate number of fragments based on energy
-                fragment_count = min(int((collision_energy_kt) ** 0.5) + 2, 100)
-                
-                # Display results in expander
-                with st.expander("Collision Simulation Results", expanded=True):
-                    # Show summary metrics
-                    st.markdown(f"### Collision Energy: **{collision_energy_kt:.2f} kilotons** of TNT")
-                    
-                    # Compare to known events
-                    if collision_energy_kt < 1:
-                        st.write(f"This is a relatively minor collision, comparable to a small conventional explosion.")
-                    elif collision_energy_kt < 100:
-                        st.write(f"This collision releases energy similar to a small nuclear weapon.")
-                    else:
-                        st.write(f"This is a major collision event with significant energy release.")
-                    
-                    # Create metrics
-                    metrics_col1, metrics_col2 = st.columns(2)
-                    
-                    with metrics_col1:
-                        st.metric("Total Mass", f"{(mass1 + mass2)/1000000:.2f} million kg")
-                        st.metric("Estimated Fragments", f"{fragment_count}")
-                    
-                    with metrics_col2:
-                        st.metric("Distance from Earth", f"{distance_from_earth:.1f} million km")
-                        st.metric("Earth Impact Risk", f"{'Low' if distance_from_earth > 20 else 'Moderate' if distance_from_earth > 5 else 'High'}")
-                    
-                    # Visualization of collision
-                    st.subheader("Collision Visualization")
-                    
-                    # Create visualization using plotly
-                    fig = go.Figure()
-                    
-                    # Add pre-collision asteroids
-                    fig.add_trace(go.Scatter(
-                        x=[-50], y=[0],
-                        mode="markers",
-                        marker=dict(
-                            size=asteroid1_diameter/10,
-                            color="brown",
-                            symbol="circle"
-                        ),
-                        name="Asteroid 1"
-                    ))
-                    
-                    fig.add_trace(go.Scatter(
-                        x=[50], y=[0],
-                        mode="markers",
-                        marker=dict(
-                            size=asteroid2_diameter/10,
-                            color="gray",
-                            symbol="circle"
-                        ),
-                        name="Asteroid 2"
-                    ))
-                    
-                    # Add collision point
-                    fig.add_trace(go.Scatter(
-                        x=[0], y=[0],
-                        mode="markers",
-                        marker=dict(
-                            size=30,
-                            color="orange",
-                            opacity=0.7,
-                            symbol="star"
-                        ),
-                        name="Collision Point"
-                    ))
-                    
-                    # Add fragments
-                    np.random.seed(42)  # For reproducible results
-                    fragment_sizes = np.random.exponential(scale=5, size=fragment_count)
-                    fragment_sizes = np.clip(fragment_sizes, 2, 20)
-                    
-                    angles = np.random.uniform(0, 2*np.pi, fragment_count)
-                    distances = np.random.uniform(10, 100, fragment_count)
-                    
-                    x_coords = np.cos(angles) * distances
-                    y_coords = np.sin(angles) * distances
-                    
-                    fig.add_trace(go.Scatter(
-                        x=x_coords, y=y_coords,
-                        mode="markers",
-                        marker=dict(
-                            size=fragment_sizes,
-                            color="red",
-                            opacity=0.6,
-                            symbol="circle"
-                        ),
-                        name="Fragments"
-                    ))
-                    
-                    # Add Earth (for scale)
-                    earth_distance = distance_from_earth * 10  # Scale for visualization
-                    fig.add_trace(go.Scatter(
-                        x=[-earth_distance], y=[0],
-                        mode="markers+text",
-                        marker=dict(
-                            size=12,
-                            color="blue",
-                            symbol="circle"
-                        ),
-                        text=["Earth"],
-                        textposition="top center",
-                        name="Earth"
-                    ))
-                    
-                    # Add trajectory lines
-                    for i in range(min(20, fragment_count)):  # Show trajectories for up to 20 fragments
-                        x_end = x_coords[i] * 2
-                        y_end = y_coords[i] * 2
-                        
-                        # Check if trajectory points toward Earth
-                        points_to_earth = (x_end < 0 and abs(y_end / x_end) < 0.2)
-                        
-                        fig.add_trace(go.Scatter(
-                            x=[0, x_end], y=[0, y_end],
-                            mode="lines",
-                            line=dict(
-                                color="red" if points_to_earth else "gray",
-                                width=2 if points_to_earth else 1,
-                                dash="solid" if points_to_earth else "dot"
-                            ),
-                            showlegend=False
-                        ))
-                    
-                    # Improve layout
-                    fig.update_layout(
-                        title="Asteroid Collision and Fragment Trajectories",
-                        xaxis_title="X Distance (arbitrary units)",
-                        yaxis_title="Y Distance (arbitrary units)",
-                        template="plotly_white",
-                        height=500,
-                        showlegend=True,
-                        legend=dict(x=0, y=1)
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Add analysis
-                    st.subheader("Collision Analysis")
-                    
-                    earth_risk = "low" if distance_from_earth > 20 else "moderate" if distance_from_earth > 5 else "high"
-                    
-                    if earth_risk == "low":
-                        st.write("This collision poses minimal risk to Earth due to the large distance. Any fragments are unlikely to reach Earth's vicinity.")
-                    elif earth_risk == "moderate":
-                        st.write("This collision occurs at a moderate distance from Earth. Some fragments may enter Earth's vicinity within months, requiring monitoring.")
-                    else:
-                        st.write("This collision occurs dangerously close to Earth. Multiple fragments are likely to reach Earth's vicinity within weeks, posing significant hazards.")
-                    
-                    # Emergency response
-                    if earth_risk != "low":
-                        st.subheader("Response Recommendations")
-                        st.markdown(f"""
-                        - **Monitoring**: Immediate tracking of all fragments larger than {max(asteroid1_diameter, asteroid2_diameter)/20:.0f} meters
-                        - **Impact Risk Assessment**: Calculate potential impact trajectories within {7 if earth_risk == "high" else 30} days
-                        - **Deflection Options**: Evaluate potential deflection missions for any fragments on Earth-impact trajectories
-                        - **Civil Defense**: {'Immediate preparation of emergency protocols' if earth_risk == "high" else 'Review of emergency protocols'}
-                        """)
+        # Update session state
+        st.session_state.viz_type = selected_viz
         
-        elif simulation_type == "Asteroid Fragments":
-            st.subheader("Asteroid Fragments Earth Impact")
+        # Add previous selection to session state if not present
+        if 'previous_viz_type' not in st.session_state:
+            st.session_state.previous_viz_type = st.session_state.viz_type
             
-            # Asteroid fragments simulator inputs
-            st.write("Simulate multiple asteroid fragments hitting Earth simultaneously")
+        # This ensures the visualization type is maintained when switching tabs
+        selected_viz = st.radio(
+            "Select Visualization Type",
+            viz_options,
+            index=viz_options.index(st.session_state.viz_type) if st.session_state.viz_type in viz_options else 0,
+            key='viz_selector'
+        )
+        
+        # Check if visualization type changed
+        if selected_viz != st.session_state.previous_viz_type:
+            st.session_state.previous_viz_type = st.session_state.viz_type
+            st.session_state.viz_type = selected_viz
+            st.rerun()
+        
+        # Update session state with selected visualization
+        st.session_state.viz_type = selected_viz
+        
+        # Use the selected visualization type
+        viz_type = selected_viz
+        
+        if viz_type == "Asteroid Distribution":
+            # Distribution visualization
+            st.subheader("NEO Distribution in Space")
+            fig = plot_feature_distributions(df)
+            st.plotly_chart(fig, use_container_width=True)
             
-            # Parameters for fragment simulation
-            fragments_col1, fragments_col2 = st.columns(2)
+            # Correlation heatmap
+            st.subheader("Feature Correlation")
+            fig = plot_correlation_heatmap(df)
+            st.plotly_chart(fig, use_container_width=True)
             
-            with fragments_col1:
-                parent_asteroid_size = st.number_input(
-                    "Parent Asteroid Size (meters)",
-                    min_value=50.0,
-                    max_value=5000.0,
-                    value=200.0,
-                    step=50.0
+        elif viz_type == "Model Comparison":
+            st.subheader("Model Comparison and Training")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Model selection for comparison
+                models_to_compare = st.multiselect(
+                    "Select Models to Compare",
+                    ["Random Forest", "XGBoost", "Neural Network", "Logistic Regression"],
+                    default=["Random Forest", "XGBoost"]
                 )
                 
-                fragment_count = st.slider(
-                    "Number of Fragments",
-                    min_value=2,
-                    max_value=50,
-                    value=8
-                )
+                # Training parameters
+                epochs = st.slider("Training Epochs", 10, 200, 50)
+                cv_folds = st.slider("Cross-validation Folds", 3, 10, 5)
                 
-                fragment_density = st.number_input(
-                    "Fragment Density (kg/m³)",
-                    min_value=1000.0,
-                    max_value=8000.0,
-                    value=3000.0,
-                    step=500.0
-                )
-                
-            with fragments_col2:
-                entry_angle = st.slider(
-                    "Entry Angle (degrees from horizontal)",
-                    min_value=5,
-                    max_value=90,
-                    value=45
-                )
-                
-                spread_angle = st.slider(
-                    "Fragment Spread (degrees)",
-                    min_value=1,
-                    max_value=60,
-                    value=15,
-                    help="Angular spread of fragments in the sky"
-                )
-                
-                impact_velocity = st.number_input(
-                    "Impact Velocity (km/s)",
-                    min_value=11.0,
-                    max_value=72.0,
-                    value=20.0,
-                    step=1.0
-                )
-            
-            # Impact region selector
-            impact_region = st.selectbox(
-                "Primary Impact Region",
-                ["Random Global", "Ocean", "Land (Urban)", "Land (Rural)", "Polar Region"]
-            )
-            
-            # Run fragments simulation button with custom styling
-            st.markdown("""
-            <style>
-            .fragments-container {
-                background-color: rgba(0, 188, 212, 0.1);
-                border-radius: 10px;
-                padding: 15px;
-                margin: 20px 0;
-                border-left: 4px solid #00BCD4;
-                text-align: center;
-            }
-            </style>
-            <div class="fragments-container">
-                <p style="font-size:0.9em; margin-bottom:10px;">
-                Simulate multiple asteroid fragments hitting Earth and calculate the combined damage effects
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if st.button("Run Fragments Simulation", type="primary", key="fragments_btn"):
-                # Calculate total volume of parent asteroid
-                parent_volume = (4/3) * np.pi * ((parent_asteroid_size / 2) ** 3)
-                
-                # Calculate fragment sizes (following a power law distribution)
-                np.random.seed(42)  # For reproducible results
-                
-                # Generate fragment sizes using a power law distribution
-                alpha = 1.8  # Power law exponent
-                r_min = 0.05 * (parent_asteroid_size / 2)  # Minimum radius as fraction of parent
-                r_max = 0.4 * (parent_asteroid_size / 2)   # Maximum radius as fraction of parent
-                
-                # Generate random values following power law
-                u = np.random.uniform(0, 1, fragment_count)
-                fragment_radii = ((r_max**(1-alpha) - r_min**(1-alpha)) * u + r_min**(1-alpha))**(1/(1-alpha))
-                
-                # Convert to diameters
-                fragment_diameters = 2 * fragment_radii
-                
-                # Calculate fragment masses
-                fragment_volumes = [(4/3) * np.pi * (radius**3) for radius in fragment_radii]
-                fragment_masses = [volume * fragment_density for volume in fragment_volumes]
-                
-                # Calculate total fragment volume to verify conservation
-                total_fragment_volume = sum(fragment_volumes)
-                volume_ratio = total_fragment_volume / parent_volume
-                
-                # Adjust if total volume differs significantly from parent volume
-                if abs(1 - volume_ratio) > 0.1:
-                    adjustment_factor = (parent_volume / total_fragment_volume) ** (1/3)
-                    fragment_radii = [radius * adjustment_factor for radius in fragment_radii]
-                    fragment_diameters = [2 * radius for radius in fragment_radii]
-                    fragment_volumes = [(4/3) * np.pi * (radius**3) for radius in fragment_radii]
-                    fragment_masses = [volume * fragment_density for volume in fragment_volumes]
-                
-                # Generate impact locations
-                # For simplicity, we'll distribute the impacts in a circular pattern
-                central_angle = np.random.uniform(0, 360)  # Random central direction
-                impact_angles = np.linspace(central_angle - spread_angle/2, central_angle + spread_angle/2, fragment_count)
-                
-                # Convert impact velocity to m/s
-                velocity_ms = impact_velocity * 1000
-                
-                # Calculate impact energies
-                impact_energies = [0.5 * mass * (velocity_ms ** 2) for mass in fragment_masses]
-                
-                # Convert to kilotons
-                impact_energies_kt = [energy / 4.184e12 for energy in impact_energies]
-                
-                # Adjust for entry angle
-                angle_factor = np.sin(np.radians(entry_angle))
-                adjusted_energies_kt = [energy * angle_factor for energy in impact_energies_kt]
-                
-                # Calculate damage radii
-                thermal_radii = [0.01 * (energy ** 0.5) for energy in adjusted_energies_kt]
-                blast_radii = [0.03 * (energy ** 0.3333) for energy in adjusted_energies_kt]
-                
-                # Display results in expander
-                with st.expander("Fragments Simulation Results", expanded=True):
-                    # Show summary metrics
-                    total_energy = sum(adjusted_energies_kt)
-                    st.markdown(f"### Total Impact Energy: **{total_energy:.2f} kilotons** of TNT")
+                if st.button("Train and Compare Models"):
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
                     
-                    # Compare to known events
-                    if total_energy < 100:
-                        comparison = f"less than the 1908 Tunguska event (~15,000 kt)"
-                    elif total_energy < 15000:
-                        comparison = f"similar to the 1908 Tunguska event (~15,000 kt)"
-                    elif total_energy < 100000:
-                        comparison = f"greater than the 1908 Tunguska event but less than the Chicxulub impact"
-                    else:
-                        comparison = f"approaching the scale of the Chicxulub impact that led to dinosaur extinction"
+                    results = {}
+                    for i, model_name in enumerate(models_to_compare):
+                        status_text.text(f"Training {model_name}...")
+                        model, metrics, _ = train_and_evaluate_models(
+                            df, model_name, {'epochs': epochs, 'cv_folds': cv_folds}
+                        )
+                        results[model_name] = metrics
+                        progress_bar.progress((i + 1) / len(models_to_compare))
                     
-                    st.write(f"The combined energy release is {comparison}.")
-                    
-                    # Create metrics
-                    metrics_col1, metrics_col2 = st.columns(2)
-                    
-                    with metrics_col1:
-                        st.metric("Fragment Count", f"{fragment_count}")
-                        st.metric("Largest Fragment", f"{max(fragment_diameters):.1f} m")
-                        
-                    with metrics_col2:
-                        st.metric("Total Affected Area", f"{sum([np.pi * r**2 for r in blast_radii]):.2f} km²")
-                        st.metric("Maximum Blast Radius", f"{max(blast_radii):.2f} km")
-                    
-                    # Fragment data table
-                    st.subheader("Fragment Details")
-                    
-                    fragment_df = pd.DataFrame({
-                        "Fragment": [f"F{i+1}" for i in range(fragment_count)],
-                        "Diameter (m)": [f"{d:.1f}" for d in fragment_diameters],
-                        "Mass (tons)": [f"{m/1000:.1f}" for m in fragment_masses],
-                        "Energy (kt)": [f"{e:.2f}" for e in adjusted_energies_kt],
-                        "Blast Radius (km)": [f"{r:.2f}" for r in blast_radii]
+                    # Create comparison dataframe
+                    comparison_df = pd.DataFrame({
+                        model: {
+                            'Accuracy': results[model]['accuracy'],
+                            'Precision': results[model]['precision'],
+                            'Recall': results[model]['recall'],
+                            'F1 Score': results[model]['f1'],
+                            'AUC': results[model]['auc']
+                        } for model in results
                     })
                     
-                    st.dataframe(fragment_df.style.highlight_max(axis=0, color='red', subset=['Diameter (m)', 'Energy (kt)', 'Blast Radius (km)']))
+                    st.dataframe(comparison_df)
                     
-                    # Visualization of fragment impacts
-                    st.subheader("Impact Visualization")
-                    
-                    # Create visualization using plotly
+                    # Plot comparison
                     fig = go.Figure()
+                    for model in results:
+                        fig.add_trace(go.Scatter(
+                            x=results[model]['fpr'],
+                            y=results[model]['tpr'],
+                            name=f"{model} (AUC={results[model]['auc']:.3f})"
+                        ))
                     
-                    # Draw Earth surface
-                    x_range = 200  # Arbitrary units for visualization
                     fig.add_trace(go.Scatter(
-                        x=np.linspace(-x_range, x_range, 100),
-                        y=[0] * 100,
-                        mode="lines",
-                        line=dict(color="green", width=2),
-                        name="Earth's Surface"
+                        x=[0, 1], y=[0, 1],
+                        mode='lines',
+                        name='Random',
+                        line=dict(dash='dash')
                     ))
                     
-                    # Add impact points and blast radii
-                    for i in range(fragment_count):
-                        # Generate positions distributed across the visualization
-                        position = (i - fragment_count/2) * (x_range / (fragment_count * 0.7))
-                        
-                        # Add impact point
-                        fig.add_trace(go.Scatter(
-                            x=[position], y=[0],
-                            mode="markers",
-                            marker=dict(
-                                size=fragment_diameters[i] / 4,  # Scaled for visibility
-                                color="brown",
-                                symbol="circle"
-                            ),
-                            name=f"Fragment {i+1}",
-                            showlegend=(i < 5)  # Show legend for first 5 only to avoid clutter
-                        ))
-                        
-                        # Add blast radius circle (flattened for perspective)
-                        theta = np.linspace(0, 2*np.pi, 100)
-                        blast_x = position + blast_radii[i] * np.cos(theta) 
-                        blast_y = blast_radii[i] * np.abs(np.sin(theta)) / 4  # Flattened circle
-                        
-                        fig.add_trace(go.Scatter(
-                            x=blast_x, y=blast_y,
-                            mode="lines",
-                            line=dict(color="rgba(255,0,0,0.3)", width=1),
-                            fill="toself",
-                            fillcolor=f"rgba(255,0,0,{min(adjusted_energies_kt[i] / max(adjusted_energies_kt), 0.5):.2f})",
-                            name=f"Blast {i+1}",
-                            showlegend=False
-                        ))
-                        
-                        # Add trajectory line
-                        entry_x = position - (blast_radii[i] * 3) * np.cos(np.radians(entry_angle))
-                        entry_y = (blast_radii[i] * 3) * np.sin(np.radians(entry_angle))
-                        
-                        fig.add_trace(go.Scatter(
-                            x=[entry_x, position], y=[entry_y, 0],
-                            mode="lines",
-                            line=dict(color="gray", width=1, dash="dot"),
-                            showlegend=False
-                        ))
-                    
-                    # Improve layout
                     fig.update_layout(
-                        title="Multiple Fragment Impacts",
-                        xaxis_title="Distance (km)",
-                        yaxis_title="Height (km)",
-                        template="plotly_white",
-                        height=400,
-                        showlegend=True
+                        title='ROC Curves Comparison',
+                        xaxis_title='False Positive Rate',
+                        yaxis_title='True Positive Rate',
+                        height=500
                     )
                     
                     st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Add analysis
-                    st.subheader("Multiple Impact Analysis")
-                    
-                    impact_severity = "low" if total_energy < 100 else "moderate" if total_energy < 10000 else "severe" if total_energy < 100000 else "catastrophic"
-                    
-                    if impact_severity == "low":
-                        st.write("These impacts would cause localized damage with minimal regional effects. Most fragments would create small craters and limited blast damage.")
-                    elif impact_severity == "moderate":
-                        st.write("These impacts would cause significant regional damage. Multiple cities could be affected if impacts occur near populated areas, with potential for thousands of casualties.")
-                    elif impact_severity == "severe":
-                        st.write("These impacts represent a severe regional or continental catastrophe. Multiple large cities could be completely destroyed with millions of casualties possible.")
-                    else:
-                        st.write("These impacts represent a global catastrophe scenario. Worldwide climate effects would follow, including significant cooling and agricultural disruption for years.")
-                    
-                    # Emergency response
-                    st.subheader("Emergency Response Planning")
-                    st.markdown(f"""
-                    - **Combined Affected Area**: ~{sum([np.pi * r**2 for r in blast_radii]):.2f} km²
-                    - **Population Impact**: {"Localized" if impact_severity == "low" else "Regional" if impact_severity == "moderate" else "Continental" if impact_severity == "severe" else "Global"}
-                    - **Evacuation Requirements**: {"Limited, tactical evacuation" if impact_severity == "low" else "Major regional evacuation" if impact_severity == "moderate" else "Mass evacuation of multiple regions" if impact_severity == "severe" else "Impossible - focus on sheltering"}
-                    - **Long-term Effects**: {"Minimal" if impact_severity == "low" else "Months of recovery needed" if impact_severity == "moderate" else "Years of recovery needed" if impact_severity == "severe" else "Decades of global climate and agricultural disruption"}
-                    """)
-                    
-                    # Add a downloadable report option
-                    st.markdown("### Download Simulation Report")
-                    st.info("PDF report generation would be available here in the production version.")
-        
-        if simulation_type == "Single Asteroid Impact":
-            # Impact simulator inputs
-            st.write("Simulate the impact of an asteroid with Earth")
-        
-        # Create two columns for input form
-        sim_col1, sim_col2 = st.columns(2)
-        
-        with sim_col1:
-            # Input for asteroid diameter
-            asteroid_diameter = st.number_input(
-                "Asteroid Diameter (meters)", 
-                min_value=1.0, 
-                max_value=10000.0, 
-                value=50.0,
-                step=10.0,
-                key="single_asteroid_diameter"
+            
+            with col2:
+                st.subheader("Training History")
+                # Add training metrics plot
+                if 'training_history' in st.session_state:
+                    fig = go.Figure()
+                    for metric in ['loss', 'val_loss']:
+                        fig.add_trace(go.Scatter(
+                            y=st.session_state.training_history[metric],
+                            name=metric
+                        ))
+                    fig.update_layout(
+                        title='Training History',
+                        xaxis_title='Epoch',
+                        yaxis_title='Loss',
+                        height=300
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                
+        elif viz_type == "3D Space Visualization":
+            # 3D visualization of asteroids
+            st.subheader("3D Asteroid Positions")
+            fig = create_3d_asteroid_visualization(df)
+            st.plotly_chart(fig, use_container_width=True)
+            
+        elif viz_type == "Trajectory Analysis":
+            # Asteroid trajectories
+            st.subheader("Asteroid Trajectories")
+            
+            # Select specific asteroids for trajectory
+            top_hazardous = df.sort_values('diameter_velocity_ratio', ascending=False).head(10)
+            selected_asteroid = st.selectbox(
+                "Select Asteroid for Trajectory Analysis",
+                top_hazardous['name'].tolist()
             )
             
-            # Input for asteroid velocity
-            asteroid_velocity = st.number_input(
-                "Impact Velocity (km/s)",
-                min_value=11.0,  # Earth's escape velocity
-                max_value=72.0,  # Max recorded NEO velocity 
-                value=20.0,
-                step=1.0,
-                key="single_asteroid_velocity"
-            )
-        
-        with sim_col2:
-            # Input for asteroid density
-            asteroid_density = st.number_input(
-                "Asteroid Density (kg/m³)",
-                min_value=1000.0,
-                max_value=8000.0,
-                value=3000.0,
-                step=500.0,
-                key="single_asteroid_density"
+            selected_data = df[df['name'] == selected_asteroid]
+            
+            if not selected_data.empty:
+                fig = create_interactive_asteroid_paths(selected_data)
+                st.plotly_chart(fig, use_container_width=True)
+            
+                # Additional trajectory animation
+                st.subheader("Animated Trajectory")
+                fig = create_asteroid_trajectory_animation(selected_data)
+                st.plotly_chart(fig, use_container_width=True)
+            
+        elif viz_type == "Time Series Analysis":
+            # Time series of NEO approaches
+            st.subheader("NEO Approaches Over Time")
+            
+            # Group by date
+            df['approach_date'] = pd.to_datetime(df['close_approach_date'])
+            daily_counts = df.groupby('approach_date').size().reset_index(name='count')
+            daily_hazardous = df[df['is_potentially_hazardous']].groupby('approach_date').size().reset_index(name='hazardous_count')
+            
+            # Merge the two dataframes
+            merged_df = pd.merge(daily_counts, daily_hazardous, on='approach_date', how='left')
+            merged_df['hazardous_count'] = merged_df['hazardous_count'].fillna(0)
+            
+            # Create a time series plot
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=merged_df['approach_date'], 
+                y=merged_df['count'],
+                mode='lines+markers',
+                name='All NEOs',
+                line=dict(color='#2196F3', width=2),
+                marker=dict(size=8)
+            ))
+            
+            fig.add_trace(go.Scatter(
+                x=merged_df['approach_date'], 
+                y=merged_df['hazardous_count'],
+                mode='lines+markers',
+                name='Hazardous NEOs',
+                line=dict(color='#F44336', width=2),
+                marker=dict(size=8)
+            ))
+            
+            fig.update_layout(
+                title='NEO Approaches by Date',
+                xaxis_title='Date',
+                yaxis_title='Number of NEOs',
+                legend=dict(
+                    yanchor="top",
+                    y=0.99,
+                    xanchor="left",
+                    x=0.01
+                )
             )
             
-            # Input for impact angle
-            impact_angle = st.slider(
-                "Impact Angle (degrees from horizontal)",
-                min_value=0,
-                max_value=90,
-                value=45,
-                key="single_impact_angle"
+            st.plotly_chart(fig, use_container_width=True)
+            
+        elif viz_type == "Close Approach Map":
+            st.subheader("Global Map of NEO Close Approaches")
+            
+            st.markdown("""
+            <div style='background-color: rgba(240, 240, 240, 0.5); border-radius: 10px; padding: 15px; margin-bottom: 20px; border-left: 6px solid #2196F3;'>
+                <h4 style='color: #000000; margin-top:0;'>About Close Approach Map</h4>
+                <p style='color: #000000;'>
+                This map visualizes the predicted close approach locations of Near-Earth Objects (NEOs).
+                The points represent the location on Earth that would be closest to the NEO during its approach.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Generate approximate closest approach points
+            # In reality, close approach points would be calculated based on orbital mechanics,
+            # but for demonstration we'll create them based on asteroid properties
+            
+            # Filter data for the visualization
+            approach_asteroids = df.sort_values('miss_distance').head(20)
+            
+            # Create latitude/longitude points
+            # We'll use a deterministic approach to generate points based on asteroid properties
+            # This ensures consistent visualization and spreads the points across the globe
+            
+            # Initialize empty lists
+            lats = []
+            lons = []
+            sizes = []
+            colors = []
+            hover_texts = []
+            
+            # Generate points based on asteroid properties
+            import numpy as np
+            np.random.seed(42)  # For reproducibility
+            
+            for idx, row in approach_asteroids.iterrows():
+                # Use asteroid properties to deterministically generate coordinates
+                # This approach creates a global distribution based on asteroid properties
+                lat = (row['absolute_magnitude'] % 18) * 10 - 90
+                lon = (row['miss_distance'] % 36) * 10 - 180
+                
+                # Adjust to ensure within bounds
+                lat = max(min(lat, 90), -90)
+                lon = max(min(lon, 180), -180)
+                
+                # Add some small variation
+                lat += np.random.uniform(-5, 5)
+                lon += np.random.uniform(-5, 5)
+                
+                # Calculate size for visualization (based on diameter)
+                size = row['estimated_diameter_max'] * 50
+                size = max(5, min(size, 20))  # Constrain size for better visualization
+                
+                # Calculate color value (based on velocity)
+                # Normalize velocity to 0-1 range for color scale
+                min_vel = approach_asteroids['relative_velocity'].min()
+                max_vel = approach_asteroids['relative_velocity'].max()
+                norm_vel = (row['relative_velocity'] - min_vel) / (max_vel - min_vel) if max_vel > min_vel else 0.5
+                
+                # Create hover text with asteroid information
+                hover_text = f"<b>{row['name']}</b><br>" + \
+                             f"Date: {row['close_approach_date']}<br>" + \
+                             f"Diameter: {row['estimated_diameter_max']*1000:.1f} m<br>" + \
+                             f"Miss Distance: {row['miss_distance']/1000000:.2f} million km<br>" + \
+                             f"Velocity: {row['relative_velocity']:.1f} km/s"
+                
+                # Add to lists
+                lats.append(lat)
+                lons.append(lon)
+                sizes.append(size)
+                colors.append(norm_vel)
+                hover_texts.append(hover_text)
+            
+            # Create a dataframe for the map
+            map_df = pd.DataFrame({
+                'lat': lats,
+                'lon': lons,
+                'size': sizes,
+                'color': colors,
+                'text': hover_texts,
+                'name': approach_asteroids['name'].values
+            })
+            
+            # Create the map with scatter points
+            fig = px.scatter_geo(
+                map_df,
+                lat='lat',
+                lon='lon',
+                size='size',
+                color='color',
+                color_continuous_scale='Viridis',
+                hover_name='name',
+                custom_data=['text'],
+                title="Predicted NEO Close Approach Locations",
+                projection='natural earth'
             )
+            
+            # Update hover template to use the HTML hover text
+            fig.update_traces(
+                hovertemplate="%{customdata[0]}<extra></extra>"
+            )
+            
+            # Update layout
+            fig.update_layout(
+                coloraxis_colorbar=dict(
+                    title="Relative Velocity",
+                    tickvals=[0, 0.5, 1],
+                    ticktext=['Slower', 'Medium', 'Faster']
+                ),
+                margin=dict(l=0, r=0, t=30, b=0)
+            )
+            
+            # Show the map
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Add information about the top 5 closest approaches
+            st.subheader("Closest Approaches Details")
+            
+            closest_approaches = df.sort_values('miss_distance').head(5)
+            closest_df = closest_approaches[['name', 'close_approach_date', 
+                                            'miss_distance', 'relative_velocity', 
+                                            'estimated_diameter_max']]
+            
+            # Format columns for display
+            closest_df['miss_distance'] = closest_df['miss_distance'].apply(lambda x: f"{x/1000000:.2f} million km")
+            closest_df['relative_velocity'] = closest_df['relative_velocity'].apply(lambda x: f"{x:.2f} km/s")
+            closest_df['estimated_diameter_max'] = closest_df['estimated_diameter_max'].apply(lambda x: f"{x*1000:.1f} m")
+            
+            # Rename columns for display
+            closest_df.columns = ['Asteroid Name', 'Approach Date', 'Miss Distance', 
+                                 'Relative Velocity', 'Maximum Diameter']
+            
+            st.dataframe(closest_df, use_container_width=True)
+    
+    # Threat Assessment Tab
+    with tabs[2]:
+        st.subheader("Threat Assessment Analysis")
         
-        # Impact location (for future map integration)
-        impact_location = st.selectbox(
-            "Impact Location",
-            ["Ocean", "Land (Urban)", "Land (Rural)", "Polar Region", "Custom"],
-            key="single_impact_location"
+        # Model training and prediction
+        with st.spinner("Training model and generating predictions..."):
+            # Get model hyperparameters from advanced settings
+            model_params = {}
+            if st.session_state.show_advanced:
+                if model_type == "Random Forest":
+                    model_params = {
+                        'n_estimators': n_estimators,
+                        'max_depth': max_depth
+                    }
+                elif model_type == "XGBoost":
+                    model_params = {
+                        'learning_rate': learning_rate,
+                        'max_depth': max_depth
+                    }
+                elif model_type == "Neural Network":
+                    model_params = {
+                        'hidden_layers': hidden_layers,
+                        'neurons_per_layer': neurons_per_layer
+                    }
+                
+                # Add hyperparameter optimization if enabled
+                if use_hyperopt:
+                    model_params['optimize'] = True
+                    model_params['n_trials'] = n_trials
+            
+            # Train model or load cached model if already trained with same parameters
+            if (st.session_state.trained_model is None or 
+                st.session_state.model_type != model_type or 
+                st.session_state.model_params != model_params):
+                
+                model, metrics, feature_importance = train_and_evaluate_models(
+                    df, model_type, model_params
+                )
+                
+                # Cache the trained model and results
+                st.session_state.trained_model = model
+                st.session_state.model_metrics = metrics
+                st.session_state.feature_importance = feature_importance
+                st.session_state.model_type = model_type
+                st.session_state.model_params = model_params
+            else:
+                # Use cached model
+                model = st.session_state.trained_model
+                metrics = st.session_state.model_metrics
+                feature_importance = st.session_state.feature_importance
+        
+        # Display model performance metrics
+        st.subheader(f"Model Performance ({model_type})")
+        
+        # First row of metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Accuracy", f"{metrics['accuracy']:.4f}", 
+                      help="Percentage of correct predictions (TP+TN)/(TP+TN+FP+FN)")
+        with col2:
+            st.metric("Precision", f"{metrics['precision']:.4f}", 
+                     help="How many selected items are relevant (TP)/(TP+FP)")
+        with col3:
+            st.metric("Recall", f"{metrics['recall']:.4f}", 
+                     help="How many relevant items are selected (TP)/(TP+FN)")
+        with col4:
+            st.metric("F1 Score", f"{metrics['f1']:.4f}", 
+                     help="Harmonic mean of precision and recall: 2*(Precision*Recall)/(Precision+Recall)")
+                     
+        # Add a divider for additional metrics
+        st.markdown("---")
+        
+        # Second row with additional metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            auc_value = metrics.get('auc', 0)
+            st.metric("AUC-ROC", f"{auc_value:.4f}", 
+                     help="Area Under the Receiver Operating Characteristic Curve - higher is better")
+            
+            # Add classification thresholds
+            st.markdown("##### Classification Thresholds")
+            threshold_df = pd.DataFrame({
+                'Metric': ['Precision', 'Recall', 'F1 Score'],
+                'Value at 0.3': [f"{metrics.get('precision_at_thresholds', {}).get(0.3, 0):.3f}", 
+                               f"{metrics.get('recall_at_thresholds', {}).get(0.3, 0):.3f}",
+                               f"{metrics.get('f1_at_thresholds', {}).get(0.3, 0):.3f}"],
+                'Value at 0.5': [f"{metrics.get('precision_at_thresholds', {}).get(0.5, 0):.3f}", 
+                               f"{metrics.get('recall_at_thresholds', {}).get(0.5, 0):.3f}",
+                               f"{metrics.get('f1_at_thresholds', {}).get(0.5, 0):.3f}"],
+                'Value at 0.7': [f"{metrics.get('precision_at_thresholds', {}).get(0.7, 0):.3f}", 
+                               f"{metrics.get('recall_at_thresholds', {}).get(0.7, 0):.3f}",
+                               f"{metrics.get('f1_at_thresholds', {}).get(0.7, 0):.3f}"]
+            })
+            
+            st.dataframe(threshold_df, use_container_width=True, hide_index=True)
+            
+        with col2:
+            # Add confusion matrix as a heatmap
+            st.markdown("##### Confusion Matrix")
+            
+            # Create a confusion matrix from TN, FP, FN, TP if available
+            if all(k in metrics for k in ['tn', 'fp', 'fn', 'tp']):
+                cm = np.array([[metrics['tn'], metrics['fp']], 
+                              [metrics['fn'], metrics['tp']]])
+                
+                cm_df = pd.DataFrame(cm, 
+                                    index=['Actual Negative', 'Actual Positive'], 
+                                    columns=['Predicted Negative', 'Predicted Positive'])
+                
+                fig = px.imshow(cm, 
+                               x=['Predicted Negative', 'Predicted Positive'],
+                               y=['Actual Negative', 'Actual Positive'],
+                               color_continuous_scale='Blues',
+                               labels=dict(color="Count"),
+                               text_auto=True)
+                
+                fig.update_layout(
+                    width=400, height=400,
+                    margin=dict(l=40, r=40, t=40, b=40),
+                    xaxis_title="Predicted",
+                    yaxis_title="Actual",
+                    title="Confusion Matrix"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Confusion matrix data not available.")
+            
+        with col3:
+            # Display model specific metrics
+            st.markdown("##### Model Details")
+            
+            # Create a dataframe of important model parameters
+            model_details = []
+            
+            # Get common details
+            training_time = metrics.get('training_time', 'Not recorded')
+            model_details.append(["Training Time", f"{training_time:.2f} sec" if isinstance(training_time, (int, float)) else training_time])
+            
+            if 'class_distribution' in metrics:
+                pos_class = metrics['class_distribution'].get(1, 0)
+                neg_class = metrics['class_distribution'].get(0, 0)
+                model_details.append(["Class Balance", f"Pos: {pos_class}, Neg: {neg_class}"])
+                
+            if 'cross_val_scores' in metrics:
+                cv_mean = np.mean(metrics['cross_val_scores'])
+                cv_std = np.std(metrics['cross_val_scores'])
+                model_details.append(["Cross-Val Score", f"{cv_mean:.4f} ± {cv_std:.4f}"])
+            
+            # Model specific details
+            if model_type == "Random Forest":
+                if 'n_estimators' in model_params:
+                    model_details.append(["Number of Trees", model_params['n_estimators']])
+                if 'max_depth' in model_params:
+                    model_details.append(["Max Depth", model_params['max_depth']])
+                    
+            elif model_type == "XGBoost":
+                if 'learning_rate' in model_params:
+                    model_details.append(["Learning Rate", model_params['learning_rate']])
+                if 'max_depth' in model_params:
+                    model_details.append(["Max Depth", model_params['max_depth']])
+                    
+            elif model_type == "Neural Network":
+                if 'hidden_layers' in model_params:
+                    model_details.append(["Hidden Layers", model_params['hidden_layers']])
+                if 'neurons_per_layer' in model_params:
+                    model_details.append(["Neurons/Layer", model_params['neurons_per_layer']])
+            
+            # Create dataframe and display
+            details_df = pd.DataFrame(model_details, columns=["Parameter", "Value"])
+            st.dataframe(details_df, use_container_width=True, hide_index=True)
+        
+        # ROC curve and Precision-Recall curve
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("ROC Curve")
+            fig = plot_roc_curve(metrics['fpr'], metrics['tpr'], metrics['auc'])
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.subheader("Precision-Recall Curve")
+            fig = plot_precision_recall_curve(metrics['precision_curve'], metrics['recall_curve'], metrics['avg_precision'])
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Feature importance
+        st.subheader("Feature Importance")
+        fig = plot_feature_importance(feature_importance)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # High-risk asteroids
+        st.subheader("High-Risk Asteroids")
+        
+        # Filter to show only the top risk asteroids
+        if 'hazard_probability' in df.columns:
+            high_risk_df = df.sort_values('hazard_probability', ascending=False).head(10)
+            high_risk_df = high_risk_df[['name', 'close_approach_date_display', 'hazard_probability', 
+                                         'estimated_diameter_max', 'miss_distance', 'relative_velocity']]
+            
+            # Format columns for display
+            high_risk_df['hazard_probability'] = high_risk_df['hazard_probability'].apply(lambda x: f"{x:.4f}")
+            high_risk_df['estimated_diameter_max'] = high_risk_df['estimated_diameter_max'].apply(lambda x: f"{x*1000:.1f} m")
+            high_risk_df['miss_distance'] = high_risk_df['miss_distance'].apply(lambda x: f"{x/1000000:.2f} million km")
+            high_risk_df['relative_velocity'] = high_risk_df['relative_velocity'].apply(lambda x: f"{x:.2f} km/s")
+            
+            # Rename columns for display
+            high_risk_df.columns = ['Asteroid Name', 'Approach Date', 'Hazard Probability', 
+                                   'Diameter (max)', 'Miss Distance', 'Relative Velocity']
+            
+            st.dataframe(high_risk_df, use_container_width=True)
+        else:
+            st.warning("Hazard probabilities not available. Please retrain the model.")
+    
+    # Model Insights Tab
+    with tabs[3]:
+        st.subheader("Model Insights and Analysis")
+        
+        # Display model details
+        st.info(f"Current Model: {model_type}")
+        
+        if st.session_state.model_params:
+            st.write("Model Parameters:")
+            st.json(st.session_state.model_params)
+        
+        # Feature analysis
+        st.subheader("Feature Analysis")
+        
+        # Allow selecting specific features for analysis
+        feature_list = [col for col in df.columns if col not in ['id', 'name', 'close_approach_date', 'orbiting_body', 'has_missing_data', 'is_potentially_hazardous']]
+        selected_features = st.multiselect(
+            "Select Features for Analysis",
+            feature_list,
+            default=feature_list[:3]
         )
         
-        # Run simulation button with custom styling
+        if len(selected_features) >= 2:
+            # Create scatter plot matrix
+            fig = px.scatter_matrix(
+                df, 
+                dimensions=selected_features,
+                color="is_potentially_hazardous", 
+                color_discrete_sequence=['#2196F3', '#F44336'],
+                opacity=0.7
+            )
+            fig.update_layout(title="Feature Relationships")
+            st.plotly_chart(fig, use_container_width=True)
+        elif len(selected_features) == 1:
+            # Create histogram for single feature
+            fig = px.histogram(
+                df, 
+                x=selected_features[0],
+                color="is_potentially_hazardous",
+                color_discrete_sequence=['#2196F3', '#F44336'],
+                barmode="overlay",
+                opacity=0.7
+            )
+            fig.update_layout(title=f"Distribution of {selected_features[0]}")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.write("Please select at least one feature for analysis.")
+        
+        # Feature correlation with hazard probability
+        if 'hazard_probability' in df.columns:
+            st.subheader("Feature Correlation with Hazard Probability")
+            
+            # Create a numeric-only DataFrame for correlation calculation
+            numeric_cols = df[feature_list].select_dtypes(include=['float64', 'int64']).columns.tolist()
+            # Skip if there are no numeric columns to correlate
+            if len(numeric_cols) > 0:
+                # Calculate correlations with hazard_probability
+                correlation_df = pd.DataFrame(df[numeric_cols].corrwith(df['hazard_probability']))
+                correlation_df.columns = ['correlation']
+                correlation_df = correlation_df.sort_values('correlation', ascending=False)
+            
+                fig = px.bar(
+                    correlation_df,
+                    x=correlation_df.index,
+                    y='correlation',
+                    title="Correlation with Hazard Probability",
+                    color='correlation',
+                    color_continuous_scale='RdBu_r'
+                )
+                fig.update_layout(xaxis_title="Feature", yaxis_title="Correlation")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No numeric features available for correlation analysis.")
+    
+    # Impact Simulator Tab - Enhanced with collision simulation
+    with tabs[4]:
         st.markdown("""
         <style>
-        .simulation-container {
-            background-color: rgba(244, 67, 54, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin: 20px 0;
-            border-left: 4px solid #F44336;
+        .simulator-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .simulator-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            border-top: 5px solid #FF5722;
+        }
+        .simulator-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .sim-type-btn {
+            padding: 12px 16px;
+            font-weight: 500;
+            border-radius: 8px;
+            margin: 0 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
             text-align: center;
         }
+        .sim-type-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+        .sim-type-active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .sim-type-inactive {
+            background-color: #f2f2f2;
+            color: #333;
+        }
         </style>
-        <div class="simulation-container">
-            <p style="font-size:0.9em; margin-bottom:10px;">
-            Simulate the consequences of an asteroid impact based on size, velocity, and impact parameters
+        
+        <div class="simulator-header">
+            <h2 style="font-size: 2.2rem; font-weight: 700; color: #FF5722; margin-bottom: 10px;">🔥 Impact Simulator</h2>
+            <p style="font-size: 1.1rem; color: #555; max-width: 700px; margin: 0 auto;">
+                Advanced simulation tools to model asteroid impacts, collisions, and assess potential Earth damage
             </p>
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("Run Impact Simulation", type="primary", key="run_single_impact_sim"):
-            # Calculate impact energy (kilotons of TNT)
-            # Formula based on kinetic energy: E = 0.5 * m * v^2
-            # Converting to kilotons of TNT (4.184 terajoules per kiloton)
-            
-            # Calculate asteroid mass (kg)
-            volume = (4/3) * np.pi * ((asteroid_diameter / 2) ** 3)
-            mass = volume * asteroid_density
-            
-            # Convert velocity to m/s
-            velocity_m_s = asteroid_velocity * 1000
-            
-            # Calculate energy in joules
-            energy_joules = 0.5 * mass * (velocity_m_s ** 2)
-            
-            # Convert to kilotons (1 kt = 4.184e12 joules)
-            energy_kt = energy_joules / 4.184e12
-            
-            # Adjust for impact angle (vertical impact transfers more energy)
-            angle_factor = np.sin(np.radians(impact_angle))
-            adjusted_energy_kt = energy_kt * angle_factor
-            
-            # Calculate crater diameter (km) - simplified formula based on kinetic energy scaling
-            crater_diameter = 0.01 * (adjusted_energy_kt ** 0.3333)
-            
-            # Calculate fireball radius (km)
-            fireball_radius = 0.002 * (adjusted_energy_kt ** 0.4)
-            
-            # Calculate thermal radiation radius (km) - 3rd degree burns
-            thermal_radius = 0.01 * (adjusted_energy_kt ** 0.5)
-            
-            # Calculate air blast radius (km) - significant damage to buildings
-            blast_radius = 0.03 * (adjusted_energy_kt ** 0.3333)
-            
-            # Calculate earthquake magnitude (Richter scale) - simplified estimation
-            earthquake_magnitude = 0.67 * np.log10(adjusted_energy_kt) + 0.9
-            
-            # Display results in expander section
-            with st.expander("Impact Simulation Results", expanded=True):
-                st.markdown(f"### Impact Energy: **{adjusted_energy_kt:.2f} kilotons** of TNT")
-                
-                # Create comparison to known explosions
-                if adjusted_energy_kt < 20:
-                    st.write(f"Equivalent to: **{adjusted_energy_kt/0.02:.1f}× Hiroshima atomic bomb** (20 kt)")
-                elif adjusted_energy_kt < 15000:
-                    st.write(f"Equivalent to: **{adjusted_energy_kt/15000:.2f}× Tsar Bomba** (largest nuclear device ever detonated, 15 Mt)")
+        # Simulation type tabs
+        sim_types = ["Single Impact", "Asteroid Collision & Fragmentation"]
+        sim_type = st.radio("Select Simulation Type", sim_types, horizontal=True)
+        
+        if sim_type == "Single Impact":
+            st.markdown("""
+            <div class="simulator-card">
+                <div class="simulator-title">🌍 Single Asteroid Impact Simulator</div>
+                <p style="color: #555; margin-bottom: 20px;">
+                This simulator uses physics-based models to estimate the potential consequences of an asteroid impact on Earth.
+                Adjust the parameters below to simulate different impact scenarios and view the estimated effects.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Create two columns for input parameters
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Asteroid selection
+            if not df.empty:
+                hazardous_asteroids = df[df['is_potentially_hazardous']].sort_values('estimated_diameter_max', ascending=False)
+                if not hazardous_asteroids.empty:
+                    asteroid_options = ["Custom Asteroid"] + hazardous_asteroids['name'].tolist()
+                    selected_asteroid = st.selectbox("Select Asteroid", asteroid_options)
+                    
+                    if selected_asteroid != "Custom Asteroid":
+                        # Pre-fill with selected asteroid parameters
+                        selected_data = df[df['name'] == selected_asteroid].iloc[0]
+                        default_diameter = selected_data['estimated_diameter_max'] * 1000  # Convert to meters
+                        default_velocity = selected_data['relative_velocity']
+                        default_density = 3000  # kg/m³ (typical asteroid density)
+                    else:
+                        # Default values for custom asteroid
+                        default_diameter = 100
+                        default_velocity = 20
+                        default_density = 3000
                 else:
-                    st.write(f"Equivalent to: **{adjusted_energy_kt/100000:.2f}× Chicxulub impactor** (dinosaur extinction event, ~100 Mt)")
+                    # No hazardous asteroids in data, use defaults
+                    selected_asteroid = "Custom Asteroid"
+                    default_diameter = 100
+                    default_velocity = 20
+                    default_density = 3000
+            else:
+                # No data loaded, use defaults
+                selected_asteroid = "Custom Asteroid"
+                default_diameter = 100
+                default_velocity = 20
+                default_density = 3000
+            
+            # Custom parameters input
+            if selected_asteroid == "Custom Asteroid":
+                st.subheader("Asteroid Parameters")
+                diameter = st.slider("Asteroid Diameter (meters)", 1, 1000, int(default_diameter))
+                velocity = st.slider("Impact Velocity (km/s)", 10, 70, int(default_velocity))
+                density = st.slider("Asteroid Density (kg/m³)", 1000, 8000, default_density, step=100)
+            else:
+                # Display asteroid parameters from selected asteroid but allow override
+                st.subheader("Asteroid Parameters")
+                diameter = st.slider("Asteroid Diameter (meters)", 1, 1000, int(default_diameter))
+                velocity = st.slider("Impact Velocity (km/s)", 10, 70, int(default_velocity))
+                density = st.slider("Asteroid Density (kg/m³)", 1000, 8000, default_density, step=100)
                 
-                # Create columns for displaying multiple metrics
+                # Display additional info about the selected asteroid
+                st.info(f"""
+                Selected asteroid: {selected_asteroid}
+                Original estimated diameter: {default_diameter:.1f} meters
+                Original velocity: {default_velocity:.1f} km/s
+                Miss distance: {selected_data['miss_distance']/1000000:.1f} million km
+                """)
+        
+        with col2:
+            # Impact parameters
+            st.subheader("Impact Parameters")
+            impact_angle = st.slider("Impact Angle (degrees from horizontal)", 5, 90, 45)
+            
+            # Target selection
+            target_options = ["Ocean", "Continental Crust", "Urban Area", "Forest", "Desert"]
+            target = st.selectbox("Impact Target", target_options)
+            
+            # Target-specific parameters
+            if target == "Ocean":
+                water_depth = st.slider("Water Depth (meters)", 100, 5000, 2000)
+                distance_from_shore = st.slider("Distance from Shore (km)", 1, 1000, 100)
+            elif target == "Urban Area":
+                population_density = st.slider("Population Density (people/km²)", 1000, 20000, 5000)
+                building_strength = st.selectbox("Building Types", ["Weak", "Medium", "Strong"])
+            
+            # Calculate button with custom styling
+            st.markdown("""
+            <style>
+            div.stButton > button {
+                background-color: #4CAF50;
+                color: white;
+                font-weight: bold;
+                border: none;
+                padding: 10px 24px;
+                border-radius: 4px;
+                margin-top: 20px;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            simulate_button = st.button("Run Impact Simulation")
+        
+        # Simulation results
+        if simulate_button:
+            st.subheader("Impact Simulation Results")
+            
+            # Create a progress indicator
+            progress_bar = st.progress(0)
+            for i in range(100):
+                time.sleep(0.01)  # Small delay for visual effect
+                progress_bar.progress(i + 1)
+            
+            # Calculate impact energy (kinetic energy)
+            # E = 0.5 * m * v^2
+            # m = (4/3) * π * r^3 * ρ
+            import math
+            radius = diameter / 2
+            volume = (4/3) * math.pi * (radius**3)
+            mass = volume * density  # kg
+            energy_joules = 0.5 * mass * (velocity * 1000)**2  # Convert km/s to m/s
+            energy_megatons = energy_joules / 4.184e15  # Convert joules to megatons of TNT
+            
+            # Create columns for results
+            res_col1, res_col2 = st.columns(2)
+            
+            with res_col1:
+                st.metric("Impact Energy", f"{energy_megatons:.2f} megatons of TNT")
+                
+                # Calculate crater size using scaling laws
+                # Simple scaling law: Crater diameter ≈ 10-20 * asteroid diameter
+                # More complex formulas exist but require more parameters
+                crater_factor = 12 * (math.sin(math.radians(impact_angle)) ** 0.33)
+                crater_diameter = crater_factor * diameter
+                
+                st.metric("Crater Diameter", f"{crater_diameter:.1f} meters")
+                
+                # Calculate blast radius - scaled based on energy
+                blast_radius = 1000 * (energy_megatons ** 0.33)  # very rough approximation
+                st.metric("Blast Radius (3rd degree burns)", f"{blast_radius:.1f} meters")
+                
+                # Calculate seismic effects
+                richter_scale = 0.67 * math.log10(energy_joules) - 5.87  # Rough conversion
+                st.metric("Earthquake Equivalent", f"{richter_scale:.1f} on Richter scale")
+            
+            with res_col2:
+                # Target-specific effects
+                if target == "Ocean":
+                    # Calculate tsunami height (very approximate)
+                    tsunami_height_at_source = diameter * 0.25 * (energy_megatons**0.1)
+                    tsunami_height_at_shore = tsunami_height_at_source * math.exp(-0.0010 * distance_from_shore)
+                    st.metric("Estimated Tsunami Height at Shore", f"{tsunami_height_at_shore:.1f} meters")
+                
+                elif target == "Urban Area":
+                    # Calculate casualties (very approximate)
+                    area_affected = math.pi * (blast_radius/1000)**2  # km²
+                    estimated_casualties = area_affected * population_density * 0.5  # 50% fatality rate in affected area
+                    st.metric("Estimated Casualties", f"{estimated_casualties:,.0f} people")
+                    
+                    # Building damage
+                    building_destruction_radius = blast_radius * (0.6 if building_strength == "Strong" else 
+                                                                0.8 if building_strength == "Medium" else 1.0)
+                    st.metric("Building Destruction Radius", f"{building_destruction_radius:.1f} meters")
+                
+                # Calculate atmospheric effects
+                dust_lofted = mass * 1000 if diameter > 100 else mass * 100  # kg, more for larger asteroids
+                st.metric("Dust Lofted into Atmosphere", f"{dust_lofted:,.0f} kg")
+                
+                # Global cooling effect for large impacts
+                if energy_megatons > 10000:  # Threshold for global effects
+                    cooling = 0.5 + 0.5 * math.log10(energy_megatons / 10000)
+                    st.metric("Potential Global Cooling", f"{cooling:.1f}°C for several months")
+            
+            # Visualization of impact
+            st.subheader("Impact Visualization")
+            
+            # Create a simple visualization
+            fig = go.Figure()
+            
+            # Draw Earth surface
+            x = np.linspace(-blast_radius*1.5, blast_radius*1.5, 100)
+            if target == "Ocean":
+                fig.add_trace(go.Scatter(x=x, y=np.zeros_like(x), mode='lines', name='Ocean Surface', line=dict(color='blue', width=2)))
+                fig.add_trace(go.Scatter(x=x, y=np.ones_like(x)*-water_depth, mode='lines', name='Ocean Floor', line=dict(color='brown', width=2)))
+            else:
+                fig.add_trace(go.Scatter(x=x, y=np.zeros_like(x), mode='lines', name='Ground Level', line=dict(color='brown', width=2)))
+            
+            # Draw crater
+            crater_x = np.linspace(-crater_diameter/2, crater_diameter/2, 100)
+            crater_depth = -crater_diameter/5  # Approximate depth as 1/5 of diameter
+            crater_y = -((1 - (crater_x/(crater_diameter/2))**2) * abs(crater_depth))
+            if target == "Ocean" and abs(crater_depth) < water_depth:
+                fig.add_trace(go.Scatter(x=crater_x, y=crater_y, mode='lines', name='Crater', line=dict(color='darkblue', width=2)))
+            else:
+                bottom_y = np.ones_like(crater_x) * (0 if target != "Ocean" else -water_depth)
+                adjusted_y = np.maximum(crater_y, bottom_y)
+                fig.add_trace(go.Scatter(x=crater_x, y=adjusted_y, mode='lines', name='Crater', line=dict(color='gray', width=2)))
+            
+            # Draw blast radius
+            fig.add_shape(type="circle", xref="x", yref="y", x0=-blast_radius, y0=-blast_radius/4, x1=blast_radius, y1=blast_radius/4, opacity=0.3, fillcolor="orange", line_color="red")
+            
+            # Add asteroid at impact point
+            fig.add_trace(go.Scatter(x=[0], y=[diameter], mode='markers', name='Asteroid', marker=dict(size=20, color='gray')))
+            
+            # Add arrow showing impact direction
+            arrow_length = blast_radius * 0.3
+            arrow_x = arrow_length * math.cos(math.radians(impact_angle))
+            arrow_y = diameter + arrow_length * math.sin(math.radians(impact_angle))
+            fig.add_annotation(x=0, y=diameter, ax=-arrow_x, ay=arrow_y, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=2, arrowwidth=3, arrowcolor="red")
+            
+            # Add shockwave circles
+            for i in range(1, 4):
+                radius = blast_radius * i/3
+                fig.add_shape(type="circle", xref="x", yref="y", x0=-radius, y0=-radius/4, x1=radius, y1=radius/4, opacity=0.1, fillcolor="orange", line_color="red", line_dash="dash")
+            
+            # Update layout
+            fig.update_layout(
+                title="Simulated Impact Cross-Section",
+                xaxis_title="Distance from Impact (meters)",
+                yaxis_title="Height/Depth (meters)",
+                autosize=True,
+                height=500,
+                showlegend=True,
+                xaxis=dict(range=[-blast_radius*1.2, blast_radius*1.2]),
+                yaxis=dict(range=[
+                    min(-water_depth*1.2 if target == "Ocean" else crater_depth*1.5, crater_depth*1.5), 
+                    max(blast_radius/3, diameter*2)
+                ]),
+                legend=dict(x=0.01, y=0.99),
+                margin=dict(l=0, r=0, t=30, b=0)
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Conclusions and notes
+            st.markdown("""
+            <div style='background-color: rgba(240, 240, 240, 0.5); border-radius: 10px; padding: 15px; margin-top: 20px; border-left: 6px solid #FF9800;'>
+                <h4 style='color: #000000; margin-top:0;'>Simulation Notes</h4>
+                <p style='color: #000000;'>
+                This simulation provides approximate results based on physics models and empirical data from impact studies.
+                Actual impacts may vary due to numerous factors including asteroid composition, angle of entry, atmospheric
+                effects, and local geography.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Add historical comparison
+            historical_events = {
+                "Chelyabinsk (2013)": 0.5,
+                "Tunguska (1908)": 10,
+                "Chicxulub (Dinosaur Extinction)": 100000000
+            }
+            
+            st.subheader("Comparison with Historical Events")
+            
+            # Create a bar chart comparing energy
+            comparison_df = pd.DataFrame({
+                'Event': list(historical_events.keys()) + [f"Simulated {diameter}m Asteroid"],
+                'Energy (Megatons)': list(historical_events.values()) + [energy_megatons]
+            })
+            
+            fig = px.bar(comparison_df, x='Event', y='Energy (Megatons)', log_y=True,
+                        color='Energy (Megatons)', color_continuous_scale='Viridis')
+            fig.update_layout(title="Impact Energy Comparison (Log Scale)")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        elif sim_type == "Asteroid Collision & Fragmentation":
+            st.markdown("""
+            <div class="simulator-card" style="border-top-color: #9C27B0;">
+                <div class="simulator-title">☄️ Asteroid Collision & Fragmentation Simulator</div>
+                <p style="color: #555; margin-bottom: 20px;">
+                This simulator models what happens when two asteroids collide in space, resulting in fragmentation and potential Earth impacts of the resulting debris.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Two columns for input parameters
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Primary Asteroid")
+                primary_diameter = st.slider("Primary Diameter (meters)", 50, 1000, 300)
+                primary_velocity = st.slider("Primary Velocity (km/s)", 5, 40, 15)
+                primary_density = st.slider("Primary Density (kg/m³)", 1500, 5000, 3000, step=100)
+                
+                st.subheader("Collision Parameters")
+                collision_angle = st.slider("Collision Angle (degrees)", 0, 90, 45)
+                distance_from_earth = st.slider("Distance from Earth (million km)", 0.1, 10.0, 2.0, step=0.1)
+                
+            with col2:
+                st.subheader("Secondary Asteroid")
+                secondary_diameter = st.slider("Secondary Diameter (meters)", 10, 500, 100)
+                secondary_velocity = st.slider("Secondary Velocity (km/s)", 5, 40, 20)
+                secondary_density = st.slider("Secondary Density (kg/m³)", 1500, 5000, 2500, step=100)
+                
+                st.subheader("Fragmentation Settings")
+                fragment_size_distribution = st.select_slider(
+                    "Fragment Size Distribution",
+                    options=["Mostly Small", "Mixed", "Mostly Large"],
+                    value="Mixed"
+                )
+                
+                momentum_conservation = st.checkbox("Apply Momentum Conservation", value=True)
+            
+            # Calculate collision button
+            simulate_collision_button = st.button("Simulate Collision", key="collision_button")
+            
+            if simulate_collision_button:
+                st.subheader("Collision Simulation Results")
+                
+                # Create a progress indicator for the simulation
+                progress_bar = st.progress(0)
+                for i in range(100):
+                    time.sleep(0.01)  # Small delay for visual effect
+                    progress_bar.progress(i + 1)
+                
+                # Calculate masses
+                import math
+                
+                def calculate_mass(diameter, density):
+                    radius = diameter / 2
+                    volume = (4/3) * math.pi * (radius**3)
+                    return volume * density  # kg
+                
+                primary_mass = calculate_mass(primary_diameter, primary_density)
+                secondary_mass = calculate_mass(secondary_diameter, secondary_density)
+                
+                # Calculate impact energy
+                relative_velocity = abs(primary_velocity - secondary_velocity)
+                collision_energy_joules = 0.5 * min(primary_mass, secondary_mass) * (relative_velocity * 1000)**2
+                collision_energy_megatons = collision_energy_joules / 4.184e15
+                
+                # Create columns for results
                 res_col1, res_col2 = st.columns(2)
                 
                 with res_col1:
-                    st.metric("Crater Diameter", f"{crater_diameter:.2f} km")
-                    st.metric("Fireball Radius", f"{fireball_radius:.2f} km")
-                    st.metric("Thermal Radiation Radius", f"{thermal_radius:.2f} km")
-                
-                with res_col2:
-                    st.metric("Air Blast Radius (Building Damage)", f"{blast_radius:.2f} km")
-                    st.metric("Earthquake Magnitude", f"{earthquake_magnitude:.1f} Richter")
-                    st.metric("Affected Area", f"{np.pi * (blast_radius ** 2):.2f} km²")
-                
-                # Visualization of impact
-                st.subheader("Impact Visualization")
-                
-                # Create visualization using plotly
-                fig = go.Figure()
-                
-                # Add Earth's surface as a line
-                fig.add_trace(go.Scatter(
-                    x=np.linspace(-blast_radius*1.5, blast_radius*1.5, 100),
-                    y=[0] * 100,
-                    mode="lines",
-                    line=dict(color="green", width=2),
-                    name="Earth's Surface"
-                ))
-                
-                # Add crater
-                theta = np.linspace(0, np.pi, 100)
-                crater_x = crater_diameter/2 * np.cos(theta)
-                crater_y = -crater_diameter/2 * np.sin(theta)/3  # Flattened ellipse for crater
-                
-                fig.add_trace(go.Scatter(
-                    x=crater_x,
-                    y=crater_y,
-                    mode="lines",
-                    line=dict(color="brown", width=2),
-                    fill="toself",
-                    fillcolor="rgba(139, 69, 19, 0.3)",
-                    name="Crater"
-                ))
-                
-                # Add concentric circles for different effect radii
-                for radius, name, color in [
-                    (fireball_radius, "Fireball", "rgba(255, 165, 0, 0.5)"),
-                    (thermal_radius, "Thermal Radiation", "rgba(255, 0, 0, 0.3)"),
-                    (blast_radius, "Air Blast", "rgba(128, 128, 128, 0.2)")
-                ]:
-                    theta = np.linspace(0, 2*np.pi, 100)
-                    x = radius * np.cos(theta)
-                    y = radius * abs(np.sin(theta)) / 4  # Flatten to show perspective
+                    st.metric("Collision Energy", f"{collision_energy_megatons:.2f} megatons of TNT")
                     
-                    fig.add_trace(go.Scatter(
-                        x=x,
-                        y=y,
-                        mode="lines",
-                        line=dict(color=color.replace("0.5", "1").replace("0.3", "1").replace("0.2", "1"), width=1),
-                        fill="toself",
-                        fillcolor=color,
-                        name=name
-                    ))
+                    # Calculate how many fragments will be created based on energy and size distribution
+                    if fragment_size_distribution == "Mostly Small":
+                        fragment_multiplier = 15
+                    elif fragment_size_distribution == "Mixed":
+                        fragment_multiplier = 10
+                    else:  # Mostly Large
+                        fragment_multiplier = 5
+                    
+                    # Number of fragments based on energy and distribution setting
+                    num_fragments = int(math.log10(collision_energy_joules) * fragment_multiplier)
+                    
+                    st.metric("Number of Fragments", f"{num_fragments}")
+                    
+                    # Calculate largest fragment size
+                    if fragment_size_distribution == "Mostly Small":
+                        largest_fragment_pct = 0.2  # 20% of original size
+                    elif fragment_size_distribution == "Mixed":
+                        largest_fragment_pct = 0.4  # 40% of original size
+                    else:  # Mostly Large
+                        largest_fragment_pct = 0.6  # 60% of original size
+                    
+                    largest_fragment_size = max(primary_diameter, secondary_diameter) * largest_fragment_pct
+                    st.metric("Largest Fragment Size", f"{largest_fragment_size:.1f} meters")
                 
-                # Improve layout
+                with res_col2:                    
+                    # Estimate number of Earth-bound fragments
+                    # This is a simplified model - in reality would depend on orbital mechanics
+                    earth_solid_angle = 4 * math.pi * (6371e3 / (distance_from_earth * 1e9))**2  # steradians
+                    total_solid_angle = 4 * math.pi  # steradians
+                    
+                    # Fragments that have Earth-intercept trajectories
+                    earth_directed_pct = earth_solid_angle / total_solid_angle
+                    # Apply a fudge factor for dramatic effect
+                    earth_directed_pct = min(0.2, earth_directed_pct * 5000)
+                    
+                    earth_bound_fragments = int(num_fragments * earth_directed_pct)
+                    earth_bound_fragments = max(1, earth_bound_fragments)  # At least 1 for simulation purposes
+                    
+                    st.metric("Earth-Bound Fragments", f"{earth_bound_fragments}")
+                    
+                    # Estimate time until fragments reach Earth
+                    avg_fragment_velocity = (primary_velocity + secondary_velocity) / 2  # km/s
+                    time_to_earth = (distance_from_earth * 1e6) / (avg_fragment_velocity * 3600 * 24)  # days
+                    
+                    st.metric("Time to Earth Impact", f"{time_to_earth:.1f} days")
+                    
+                    # Potential impact energy on Earth
+                    total_fragment_mass = primary_mass + secondary_mass
+                    earth_bound_mass = total_fragment_mass * earth_directed_pct
+                    earth_impact_energy = 0.5 * earth_bound_mass * (avg_fragment_velocity * 1000)**2
+                    earth_impact_megatons = earth_impact_energy / 4.184e15
+                    
+                    st.metric("Potential Earth Impact Energy", f"{earth_impact_megatons:.2f} megatons of TNT")
+                
+                # Generate a visualization of the collision
+                st.subheader("Collision and Fragmentation Visualization")
+                
+                # Create a 3D scatter plot for the fragmentation
+                import numpy as np
+                
+                # Generate random fragments
+                np.random.seed(42)  # For reproducibility
+                
+                # Color map based on fragment size
+                fragment_sizes = []
+                fragment_velocities = []
+                for i in range(num_fragments):
+                    if fragment_size_distribution == "Mostly Small":
+                        size = np.random.exponential(0.1) * largest_fragment_size
+                    elif fragment_size_distribution == "Mixed":
+                        size = np.random.beta(2, 2) * largest_fragment_size
+                    else:  # Mostly Large
+                        size = np.random.beta(5, 2) * largest_fragment_size
+                    
+                    size = max(1, size)  # Minimum size 1m for visibility
+                    fragment_sizes.append(size)
+                    
+                    # Fragment velocities
+                    if momentum_conservation:
+                        # More realistic: distribute momentum based on mass ratio
+                        v_factor = np.random.normal(1.0, 0.3)
+                        fragment_velocities.append(
+                            ((primary_velocity * primary_mass) + (secondary_velocity * secondary_mass)) / 
+                            (primary_mass + secondary_mass) * v_factor
+                        )
+                    else:
+                        # Simplified: velocity is between primary and secondary
+                        fragment_velocities.append(
+                            np.random.uniform(min(primary_velocity, secondary_velocity), 
+                                             max(primary_velocity, secondary_velocity))
+                        )
+                
+                # Generate fragment directions in a cone
+                theta = np.random.uniform(0, 2*np.pi, num_fragments)
+                phi = np.random.uniform(0, collision_angle*np.pi/180, num_fragments)
+                
+                # Convert to Cartesian coordinates
+                x = np.sin(phi) * np.cos(theta)
+                y = np.sin(phi) * np.sin(theta)
+                z = np.cos(phi)
+                
+                # Scale based on velocity and time
+                time_factor = 50  # For visualization
+                x = x * fragment_velocities * time_factor
+                y = y * fragment_velocities * time_factor
+                z = z * fragment_velocities * time_factor
+                
+                # Create scatter plot of fragments
+                fragment_df = pd.DataFrame({
+                    'x': x,
+                    'y': y,
+                    'z': z,
+                    'size': fragment_sizes,
+                    'velocity': fragment_velocities,
+                    'earth_bound': np.random.choice([True, False], size=num_fragments, p=[earth_directed_pct, 1-earth_directed_pct])
+                })
+                
+                # Color earth-bound fragments red
+                colors = np.where(fragment_df['earth_bound'], 'red', 'gray')
+                
+                # Create 3D scatter
+                fig = go.Figure(data=[
+                    go.Scatter3d(
+                        x=fragment_df['x'],
+                        y=fragment_df['y'],
+                        z=fragment_df['z'],
+                        mode='markers',
+                        marker=dict(
+                            size=fragment_df['size']/5,  # Scale down for visualization
+                            color=colors,
+                            opacity=0.8
+                        ),
+                        name='Fragments'
+                    )
+                ])
+                
+                # Add primary and secondary asteroids at collision point
+                fig.add_trace(go.Scatter3d(
+                    x=[0],
+                    y=[0],
+                    z=[0],
+                    mode='markers',
+                    marker=dict(
+                        size=20,
+                        color='blue',
+                        symbol='diamond'
+                    ),
+                    name='Collision Point'
+                ))
+                
+                # Add Earth (scaled)
+                earth_distance = distance_from_earth * 1000  # for visualization
+                earth_radius = 10  # scaled radius for visualization
+                
+                # Create a sphere for Earth
+                u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+                x_earth = earth_distance + earth_radius * np.cos(u) * np.sin(v)
+                y_earth = earth_radius * np.sin(u) * np.sin(v)
+                z_earth = earth_radius * np.cos(v)
+                
+                fig.add_trace(go.Surface(
+                    x=x_earth, y=y_earth, z=z_earth,
+                    colorscale=[[0, 'blue'], [1, 'cyan']],
+                    opacity=0.8,
+                    name='Earth'
+                ))
+                
+                # Add vectors for fragment paths to Earth
+                earth_bound_df = fragment_df[fragment_df['earth_bound']]
+                if not earth_bound_df.empty:
+                    for idx, row in earth_bound_df.iterrows():
+                        # Create a line from fragment to Earth
+                        fig.add_trace(go.Scatter3d(
+                            x=[row['x'], earth_distance],
+                            y=[row['y'], 0],
+                            z=[row['z'], 0],
+                            mode='lines',
+                            line=dict(color='red', width=1, dash='dot'),
+                            showlegend=False
+                        ))
+                
+                # Update layout
                 fig.update_layout(
-                    title="Cross-section View of Impact Effects",
-                    xaxis_title="Distance from Impact (km)",
-                    yaxis_title="Depth/Height (km)",
-                    legend=dict(x=0, y=1),
-                    template="plotly_dark" if st.session_state.theme == "dark" else "plotly_white",
-                    height=400
+                    title="Asteroid Collision and Fragmentation Simulation",
+                    scene=dict(
+                        xaxis_title="X (km)",
+                        yaxis_title="Y (km)", 
+                        zaxis_title="Z (km)",
+                        aspectratio=dict(x=2, y=1, z=1)
+                    ),
+                    height=700,
+                    legend=dict(x=0.01, y=0.99)
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Impact outcome description
-                st.subheader("Impact Consequences")
+                # Add animation of fragments over time
+                st.subheader("Fragments Approaching Earth (Animation)")
                 
-                if adjusted_energy_kt < 10:
-                    st.write("This impact would likely cause minimal damage, with most of the asteroid burning up in the atmosphere. It might create a small crater and local damage.")
-                elif adjusted_energy_kt < 1000:
-                    st.write("This impact would cause significant regional damage, with a substantial crater and destruction in the immediate area. Buildings would be damaged or destroyed within the air blast radius.")
-                elif adjusted_energy_kt < 100000:
-                    st.write("This impact would cause severe regional devastation, with extensive destruction within hundreds of kilometers. It would trigger significant earthquakes, tsunamis (if over water), and potential climate effects.")
-                else:
-                    st.write("This impact would cause global catastrophe, with immediate devastation across an entire continent. Long-term climate effects including global cooling would threaten agriculture worldwide.")
+                # Generate animation frames
+                frames = 50
                 
-                # Tips for minimizing casualties
-                st.subheader("Emergency Response Recommendations")
-                st.markdown("""
-                - **Evacuation Radius**: At minimum, evacuate all areas within the air blast radius
-                - **Emergency Services**: Position beyond the thermal radiation radius
-                - **Medical Response**: Prepare for burn injuries, crush injuries, and respiratory issues
-                - **Long-term Planning**: Consider environmental and climate impacts for larger impacts
-                """)
+                # Create dataframe for animation
+                anim_data = []
+                for i in range(frames):
+                    fraction = i / (frames - 1)
+                    for j, row in fragment_df.iterrows():
+                        if row['earth_bound'] or np.random.random() < 0.2:  # Include some non-Earth-bound for context
+                            anim_data.append({
+                                'frame': i,
+                                'fragment_id': j,
+                                'x': row['x'] + (earth_distance - row['x']) * fraction,
+                                'y': row['y'] * (1 - fraction),
+                                'z': row['z'] * (1 - fraction),
+                                'size': row['size'],
+                                'earth_bound': row['earth_bound'],
+                                'velocity': row['velocity']
+                            })
+                
+                anim_df = pd.DataFrame(anim_data)
+                
+                # Create animation - fixed implementation
+                fig = px.scatter_3d(
+                    anim_df, x='x', y='y', z='z',
+                    animation_frame='frame',
+                    color='earth_bound',
+                    color_discrete_map={True: 'red', False: 'gray'},
+                    size='size', size_max=15,
+                    hover_data=['velocity'],
+                    title="Fragments Approaching Earth Over Time"
+                )
+                
+                # Add Earth at a fixed position (without animation frames which caused the error)
+                fig.add_trace(
+                    go.Scatter3d(
+                        x=[earth_distance], y=[0], z=[0],
+                        mode='markers',
+                        marker=dict(
+                            size=15,
+                            color='blue'
+                        ),
+                        name='Earth'
+                    )
+                )
+                
+                # Update layout
+                fig.update_layout(
+                    scene=dict(
+                        xaxis_title="X (km)",
+                        yaxis_title="Y (km)", 
+                        zaxis_title="Z (km)",
+                        aspectratio=dict(x=2, y=1, z=1)
+                    ),
+                    height=600
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Estimated impact locations
+                st.subheader("Estimated Impact Locations")
+                
+                # Generate random impact locations on Earth
+                num_impacts = min(earth_bound_fragments, 20)  # Limit for visualization
+                
+                # Create random lat/long coordinates
+                np.random.seed(int(primary_diameter + secondary_diameter))
+                impact_lats = np.random.uniform(-80, 80, num_impacts)
+                impact_longs = np.random.uniform(-180, 180, num_impacts)
+                
+                # Create size and energy for each impact
+                impact_sizes = []
+                impact_energies = []
+                
+                for i in range(num_impacts):
+                    size_factor = np.random.beta(2, 5) if fragment_size_distribution == "Mostly Small" else \
+                                 np.random.beta(2, 2) if fragment_size_distribution == "Mixed" else \
+                                 np.random.beta(5, 2)
+                    
+                    impact_size = largest_fragment_size * size_factor
+                    impact_sizes.append(impact_size)
+                    
+                    # Calculate energy
+                    impact_mass = calculate_mass(impact_size, (primary_density + secondary_density)/2)
+                    impact_velocity = fragment_velocities[i % len(fragment_velocities)]
+                    impact_energy = 0.5 * impact_mass * (impact_velocity * 1000)**2 / 4.184e12  # kilotons
+                    impact_energies.append(impact_energy)
+                
+                # Create dataframe
+                impacts_df = pd.DataFrame({
+                    'lat': impact_lats,
+                    'lon': impact_longs,
+                    'size': impact_sizes,
+                    'energy': impact_energies
+                })
+                
+                # Create map
+                fig = px.scatter_geo(
+                    impacts_df, 
+                    lat='lat', 
+                    lon='lon',
+                    size='size',
+                    color='energy',
+                    hover_name='energy',
+                    hover_data={'lat': True, 'lon': True, 'size': True, 'energy': ':.2f kt'},
+                    title="Predicted Fragment Impact Locations",
+                    projection='natural earth',
+                    color_continuous_scale='Viridis'
+                )
+                
+                fig.update_layout(
+                    coloraxis_colorbar=dict(
+                        title="Energy (kt)"
+                    )
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Damage assessment
+                total_energy = sum(impact_energies)
+                
+                st.markdown(f"""
+                <div style='background-color: rgba(240, 240, 240, 0.5); border-radius: 10px; padding: 15px; margin-top: 20px; border-left: 6px solid #9C27B0;'>
+                    <h4 style='color: #000000; margin-top:0;'>Impact Assessment</h4>
+                    <p style='color: #000000;'>
+                    The collision would produce approximately <b>{num_fragments}</b> fragments, with <b>{earth_bound_fragments}</b> 
+                    potentially on Earth-intercept trajectories. The fragments would reach Earth in approximately <b>{time_to_earth:.1f}</b> days.
+                    </p>
+                    <p style='color: #000000;'>
+                    The total combined energy of all Earth impacts would be approximately <b>{total_energy:.2f}</b> kilotons of TNT.
+                    Impacts are distributed across multiple locations, reducing the catastrophic effect of a single impact.
+                    </p>
+                    <p style='color: #000000;'>
+                    The largest potential fragment has a diameter of <b>{largest_fragment_size:.1f}</b> meters, which would create
+                    a crater approximately <b>{largest_fragment_size * 10:.1f}</b> meters in diameter if it impacts land.
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
     
-    with tab5:
-        st.header("Risk Assessment & Analysis")
+    # Data Explorer Tab
+    with tabs[5]:
+        st.subheader("Raw Data Explorer")
         
-        if 'best_model' in st.session_state:
-            # Add a styled button to make predictions
-            st.markdown("""
-            <style>
-            .hazard-prediction-container {
-                background-color: rgba(255, 193, 7, 0.1);
-                border-radius: 10px;
-                padding: 15px;
-                margin: 20px 0;
-                border-left: 4px solid #FFC107;
-                text-align: center;
-            }
-            </style>
-            <div class="hazard-prediction-container">
-                <p style="font-size:0.9em; margin-bottom:10px;">
-                Analyze asteroid properties to predict potential hazards using the trained machine learning model
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            make_predictions = st.button("Make Hazard Predictions", type="primary", key="make_hazard_predictions")
-            
-            # Make predictions when button is clicked or if predictions already made
-            if make_predictions or 'predictions_made' in st.session_state:
-                with st.spinner("Making predictions..."):
-                    # Use the same feature names that were used during model training
-                    # Include all engineered features to match training data
-                    feature_names = [
-                        "absolute_magnitude", "estimated_diameter_min", "estimated_diameter_max", 
-                        "relative_velocity", "miss_distance", "orbital_stability_index", "diameter_diff"
-                    ]
-                    
-                    # Add additional engineered features if present
-                    additional_features = [
-                        "diameter_velocity_ratio", "energy_proxy", "proximity_risk", "size_uncertainty"
-                    ]
-                    
-                    # Add only features that exist in the dataframe
-                    for feature in additional_features:
-                        if feature in df.columns:
-                            feature_names.append(feature)
-                        else:
-                            st.warning(f"Missing feature: {feature}. This may affect prediction accuracy.")
-                    
-                    # Verify all required features exist
-                    missing_required = [f for f in feature_names if f not in df.columns]
-                    if missing_required:
-                        st.error(f"Missing required features for prediction: {missing_required}")
-                        st.info("Please go back to the Data Processing tab and ensure feature engineering is applied.")
-                    else:
-                        try:
-                            X = df[feature_names]
-                            
-                            # Make predictions
-                            model = st.session_state['best_model']
-                            
-                            # Debug information
-                            st.write(f"Making predictions with model: {type(model).__name__}")
-                            st.write(f"Input shape: {X.shape}")
-                            
-                            # Make predictions and convert to proper type for display and calculation
-                            preds = model.predict(X)
-                            df['predicted_hazard'] = preds
-                            
-                            # Show some statistics about predictions
-                            positive_count = np.sum(preds == True)
-                            st.write(f"Predicted hazardous asteroids: {positive_count} out of {len(preds)}")
-                            
-                            # Get prediction probabilities if available
-                            if hasattr(model, "predict_proba"):
-                                try:
-                                    proba = model.predict_proba(X)
-                                    if proba.shape[1] > 1:  # Binary classification
-                                        df['hazard_probability'] = proba[:, 1]
-                                    else:
-                                        df['hazard_probability'] = proba[:, 0]
-                                except (IndexError, ValueError) as e:
-                                    st.warning(f"Could not get prediction probabilities: {e}")
-                                    df['hazard_probability'] = 0.5
-                            else:
-                                df['hazard_probability'] = 0.5
-                            
-                            # Update session state
-                            st.session_state['neo_df'] = df.copy()
-                            st.session_state['predictions_made'] = True
-                            
-                            # Confirm predictions complete
-                            st.success("✅ Predictions made successfully!")
-                        except Exception as e:
-                            st.error(f"Error making predictions: {str(e)}")
-                            import traceback
-                            st.code(traceback.format_exc())
-            
-            # Display prediction results
-            st.subheader("Hazardous Asteroid Predictions")
-            
-            # Check if predictions have been made
-            if 'predicted_hazard' in df.columns:
-                # Prediction statistics
-                hazard_count = df['predicted_hazard'].sum()
-                total_count = len(df)
-                hazard_percent = (hazard_count / total_count) * 100 if total_count > 0 else 0
-                
-                st.write(f"Predicted hazardous asteroids: {hazard_count} out of {total_count} ({hazard_percent:.2f}%)")
-                
-                # Visualize top hazardous asteroids
-                st.subheader("Top Hazardous Asteroids")
-                
-                # Show only if there are hazardous asteroids
-                if hazard_count > 0:
-                    try:
-                        hazard_fig = visualize_top_3_hazardous_asteroids(df)
-                        st.plotly_chart(hazard_fig, use_container_width=True)
-                    except Exception as e:
-                        st.error(f"Error rendering hazardous asteroid visualization: {str(e)}")
-                    
-                    # Table of hazardous asteroids
-                    st.subheader("Hazardous Asteroid Details")
-                    hazardous_df = df[df['predicted_hazard'] == True].sort_values(by='hazard_probability', ascending=False)
-                    
-                    if not hazardous_df.empty:
-                        display_cols = [
-                            'name', 'close_approach_date', 'miss_distance', 'relative_velocity',
-                            'estimated_diameter_max', 'hazard_probability'
-                        ]
-                        st.dataframe(hazardous_df[display_cols])
-                    else:
-                        st.info("No hazardous asteroids detected in this dataset.")
-                else:
-                    st.info("No hazardous asteroids detected in this dataset.")
-            else:
-                st.info("Please train a model first and make predictions to see hazardous asteroid analysis.")
-        else:
-            st.info("Please train a model first to see analysis results.")
+        # Filter options
+        col1, col2 = st.columns(2)
+        with col1:
+            filter_hazardous = st.checkbox("Show only hazardous asteroids")
+        
+        with col2:
+            min_diameter = float(df['estimated_diameter_max'].min())
+            max_diameter = float(df['estimated_diameter_max'].max())
+            diameter_range = st.slider(
+                "Diameter Range (km)",
+                min_value=min_diameter,
+                max_value=max_diameter,
+                value=(min_diameter, max_diameter)
+            )
+        
+        # Apply filters
+        filtered_df = df.copy()
+        if filter_hazardous:
+            filtered_df = filtered_df[filtered_df['is_potentially_hazardous'] == True]
+        
+        filtered_df = filtered_df[
+            (filtered_df['estimated_diameter_max'] >= diameter_range[0]) &
+            (filtered_df['estimated_diameter_max'] <= diameter_range[1])
+        ]
+        
+        # Display filtered data
+        st.dataframe(filtered_df, use_container_width=True)
+        
+        # Data statistics
+        st.subheader("Data Statistics")
+        
+        # Select columns for statistics
+        stat_columns = st.multiselect(
+            "Select columns for statistics",
+            df.select_dtypes(include=['number']).columns.tolist(),
+            default=['absolute_magnitude', 'estimated_diameter_max', 'miss_distance', 'relative_velocity']
+        )
+        
+        if stat_columns:
+            st.dataframe(filtered_df[stat_columns].describe(), use_container_width=True)
+        
+        # Download data
+        csv = filtered_df.to_csv(index=False)
+        st.download_button(
+            label="Download Filtered Data as CSV",
+            data=csv,
+            file_name="filtered_neo_data.csv",
+            mime="text/csv",
+        )
 
-# Handle export button click
+# Handle export button
 if export_button and 'neo_df' in st.session_state:
-    df = st.session_state['neo_df']
-    
     try:
-        # Export based on selected format and content
-        with st.spinner(f"Exporting {export_content} as {export_format}..."):
-            filename = export_data(df, format=export_format, content=export_content)
+        with st.spinner("Exporting data..."):
+            export_path = export_data(
+                st.session_state['neo_df'],
+                format=export_format.lower(),
+                content=export_content.lower()
+            )
             
-            # If visualization export is selected and there are visualizations in session state
-            if export_content in ["Visualization", "All"] and 'best_model' in st.session_state:
-                try:
-                    # Create visualizations with error handling
-                    figs = {}
+            if export_format.lower() == 'pdf' and export_content.lower() in ['visualization', 'all']:
+                # For PDF exports with visualizations, we need to export the visualizations first
+                if 'trained_model' in st.session_state and st.session_state.trained_model is not None:
+                    metrics = st.session_state.model_metrics
+                    feature_importance = st.session_state.feature_importance
                     
-                    # Try to create each visualization
-                    try:
-                        scatter_fig = plot_asteroids(df, "is_potentially_hazardous", "Asteroid Distribution", True)
-                        if scatter_fig is not None:
-                            figs["scatter"] = scatter_fig
-                    except Exception as e:
-                        st.warning(f"Could not create scatter plot for export: {str(e)}")
-                    
-                    try:
-                        viz_3d = create_3d_asteroid_visualization(df)
-                        if viz_3d is not None:
-                            figs["3d"] = viz_3d
-                    except Exception as e:
-                        st.warning(f"Could not create 3D visualization for export: {str(e)}")
-                    
-                    try:
-                        # Use the static version for export as it's more reliable
-                        traj_fig = create_interactive_asteroid_paths(df)
-                        if traj_fig is not None:
-                            figs["trajectory"] = traj_fig
-                    except Exception as e:
-                        st.warning(f"Could not create asteroid trajectory visualization for export: {str(e)}")
-                    
-                    # Export visualizations if we have any
-                    if figs:
-                        viz_filename = export_visualization(format=export_format, figs=figs)
-                        st.success(f"✅ Successfully exported data to {filename} and visualizations to {viz_filename}!")
-                    else:
-                        st.warning("No visualizations could be exported due to errors.")
-                        st.success(f"✅ Successfully exported data to {filename}!")
-                        
-                except Exception as e:
-                    st.error(f"Failed to export visualizations: {str(e)}")
-                    st.success(f"✅ Successfully exported data to {filename}!")
-            else:
-                st.success(f"✅ Successfully exported to {filename}!")
+                    export_visualization(
+                        st.session_state['neo_df'],
+                        metrics,
+                        feature_importance,
+                        format='pdf'
+                    )
+            
+            st.success(f"Successfully exported data as {export_format}!")
+            
+            # Generate download link if applicable
+            if export_format.lower() in ['csv', 'json', 'excel', 'html']:
+                with open(export_path, 'rb') as f:
+                    data = f.read()
+                
+                file_extension = {
+                    'csv': 'csv',
+                    'json': 'json',
+                    'excel': 'xlsx',
+                    'html': 'html'
+                }[export_format.lower()]
+                
+                st.download_button(
+                    label=f"Download {export_format} File",
+                    data=data,
+                    file_name=f"neo_data.{file_extension}",
+                    mime=f"application/{file_extension}"
+                )
     except Exception as e:
-        st.error(f"Export failed: {str(e)}")
+        st.error(f"Error exporting data: {str(e)}")
 
-# Footer
+# Show application information at the bottom
 st.markdown("---")
-st.markdown("🚀 **NEO Asteroid Analysis Dashboard** | Data from NASA API")
+st.markdown("""
+<div style="text-align: center; color: #4CAF50; font-size: 0.8em;">
+    <p>Comprehensive Space Threat Assessment and Prediction System | Using NASA NEO API</p>
+    <p>Data refreshed: {}</p>
+</div>
+""".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")), unsafe_allow_html=True)
