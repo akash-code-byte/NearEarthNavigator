@@ -565,8 +565,6 @@ def create_3d_asteroid_visualization(df, map_type='3d'):
 
 def create_3d_asteroid_visualization(df, map_type='3d'):
     """
-    def create_3d_visualization(df):
-    """
     Create a 3D visualization of asteroids
     
     Parameters:
@@ -578,7 +576,6 @@ def create_3d_asteroid_visualization(df, map_type='3d'):
     --------
     plotly.graph_objects.Figure
         Plotly figure object
-    """
     """
     # Create a 3D scatter plot
     fig = go.Figure()
