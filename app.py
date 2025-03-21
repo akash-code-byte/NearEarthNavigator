@@ -33,8 +33,24 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# NASA API Key
-NASA_API_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
+# NASA API Key - Set to provided API key 
+NASA_API_KEY = "yl3iawXawys50GTGtKdzQ9TmbKlJpmoptjC8Shqb"
+
+# Initialize session state
+if 'show_advanced' not in st.session_state:
+    st.session_state.show_advanced = False
+if 'trained_model' not in st.session_state:
+    st.session_state.trained_model = None
+if 'model_metrics' not in st.session_state:
+    st.session_state.model_metrics = None
+if 'feature_importance' not in st.session_state:
+    st.session_state.feature_importance = None
+if 'model_type' not in st.session_state:
+    st.session_state.model_type = None
+if 'model_params' not in st.session_state:
+    st.session_state.model_params = None
+if 'viz_type' not in st.session_state:
+    st.session_state.viz_type = "Asteroid Distribution"
 
 # Function to apply theme styling - permanently using light theme with black text and enhanced UI
 def apply_theme_styling():
