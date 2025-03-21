@@ -1,4 +1,5 @@
 import os
+import time
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -650,8 +651,274 @@ if 'neo_df' in st.session_state:
             else:
                 st.info("No numeric features available for correlation analysis.")
     
-    # Data Explorer Tab
+    # Impact Simulator Tab
     with tabs[4]:
+        st.subheader("Asteroid Impact Simulator")
+        
+        st.markdown("""
+        <div style='background-color: rgba(240, 240, 240, 0.5); border-radius: 10px; padding: 15px; margin-bottom: 20px; border-left: 6px solid #4CAF50;'>
+            <h4 style='color: #000000; margin-top:0;'>About Impact Simulation</h4>
+            <p style='color: #000000;'>
+            This simulator uses physics-based models to estimate the potential consequences of an asteroid impact on Earth.
+            Adjust the parameters below to simulate different impact scenarios and view the estimated effects.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Create two columns for input parameters
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Asteroid selection
+            if not df.empty:
+                hazardous_asteroids = df[df['is_potentially_hazardous']].sort_values('estimated_diameter_max', ascending=False)
+                if not hazardous_asteroids.empty:
+                    asteroid_options = ["Custom Asteroid"] + hazardous_asteroids['name'].tolist()
+                    selected_asteroid = st.selectbox("Select Asteroid", asteroid_options)
+                    
+                    if selected_asteroid != "Custom Asteroid":
+                        # Pre-fill with selected asteroid parameters
+                        selected_data = df[df['name'] == selected_asteroid].iloc[0]
+                        default_diameter = selected_data['estimated_diameter_max'] * 1000  # Convert to meters
+                        default_velocity = selected_data['relative_velocity']
+                        default_density = 3000  # kg/m³ (typical asteroid density)
+                    else:
+                        # Default values for custom asteroid
+                        default_diameter = 100
+                        default_velocity = 20
+                        default_density = 3000
+                else:
+                    # No hazardous asteroids in data, use defaults
+                    selected_asteroid = "Custom Asteroid"
+                    default_diameter = 100
+                    default_velocity = 20
+                    default_density = 3000
+            else:
+                # No data loaded, use defaults
+                selected_asteroid = "Custom Asteroid"
+                default_diameter = 100
+                default_velocity = 20
+                default_density = 3000
+            
+            # Custom parameters input
+            if selected_asteroid == "Custom Asteroid":
+                st.subheader("Asteroid Parameters")
+                diameter = st.slider("Asteroid Diameter (meters)", 1, 1000, int(default_diameter))
+                velocity = st.slider("Impact Velocity (km/s)", 10, 70, int(default_velocity))
+                density = st.slider("Asteroid Density (kg/m³)", 1000, 8000, default_density, step=100)
+            else:
+                # Display asteroid parameters from selected asteroid but allow override
+                st.subheader("Asteroid Parameters")
+                diameter = st.slider("Asteroid Diameter (meters)", 1, 1000, int(default_diameter))
+                velocity = st.slider("Impact Velocity (km/s)", 10, 70, int(default_velocity))
+                density = st.slider("Asteroid Density (kg/m³)", 1000, 8000, default_density, step=100)
+                
+                # Display additional info about the selected asteroid
+                st.info(f"""
+                Selected asteroid: {selected_asteroid}
+                Original estimated diameter: {default_diameter:.1f} meters
+                Original velocity: {default_velocity:.1f} km/s
+                Miss distance: {selected_data['miss_distance']/1000000:.1f} million km
+                """)
+        
+        with col2:
+            # Impact parameters
+            st.subheader("Impact Parameters")
+            impact_angle = st.slider("Impact Angle (degrees from horizontal)", 5, 90, 45)
+            
+            # Target selection
+            target_options = ["Ocean", "Continental Crust", "Urban Area", "Forest", "Desert"]
+            target = st.selectbox("Impact Target", target_options)
+            
+            # Target-specific parameters
+            if target == "Ocean":
+                water_depth = st.slider("Water Depth (meters)", 100, 5000, 2000)
+                distance_from_shore = st.slider("Distance from Shore (km)", 1, 1000, 100)
+            elif target == "Urban Area":
+                population_density = st.slider("Population Density (people/km²)", 1000, 20000, 5000)
+                building_strength = st.selectbox("Building Types", ["Weak", "Medium", "Strong"])
+            
+            # Calculate button with custom styling
+            st.markdown("""
+            <style>
+            div.stButton > button {
+                background-color: #4CAF50;
+                color: white;
+                font-weight: bold;
+                border: none;
+                padding: 10px 24px;
+                border-radius: 4px;
+                margin-top: 20px;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            simulate_button = st.button("Run Impact Simulation")
+        
+        # Simulation results
+        if simulate_button:
+            st.subheader("Impact Simulation Results")
+            
+            # Create a progress indicator
+            progress_bar = st.progress(0)
+            for i in range(100):
+                time.sleep(0.01)  # Small delay for visual effect
+                progress_bar.progress(i + 1)
+            
+            # Calculate impact energy (kinetic energy)
+            # E = 0.5 * m * v^2
+            # m = (4/3) * π * r^3 * ρ
+            import math
+            radius = diameter / 2
+            volume = (4/3) * math.pi * (radius**3)
+            mass = volume * density  # kg
+            energy_joules = 0.5 * mass * (velocity * 1000)**2  # Convert km/s to m/s
+            energy_megatons = energy_joules / 4.184e15  # Convert joules to megatons of TNT
+            
+            # Create columns for results
+            res_col1, res_col2 = st.columns(2)
+            
+            with res_col1:
+                st.metric("Impact Energy", f"{energy_megatons:.2f} megatons of TNT")
+                
+                # Calculate crater size using scaling laws
+                # Simple scaling law: Crater diameter ≈ 10-20 * asteroid diameter
+                # More complex formulas exist but require more parameters
+                crater_factor = 12 * (math.sin(math.radians(impact_angle)) ** 0.33)
+                crater_diameter = crater_factor * diameter
+                
+                st.metric("Crater Diameter", f"{crater_diameter:.1f} meters")
+                
+                # Calculate blast radius - scaled based on energy
+                blast_radius = 1000 * (energy_megatons ** 0.33)  # very rough approximation
+                st.metric("Blast Radius (3rd degree burns)", f"{blast_radius:.1f} meters")
+                
+                # Calculate seismic effects
+                richter_scale = 0.67 * math.log10(energy_joules) - 5.87  # Rough conversion
+                st.metric("Earthquake Equivalent", f"{richter_scale:.1f} on Richter scale")
+            
+            with res_col2:
+                # Target-specific effects
+                if target == "Ocean":
+                    # Calculate tsunami height (very approximate)
+                    tsunami_height_at_source = diameter * 0.25 * (energy_megatons**0.1)
+                    tsunami_height_at_shore = tsunami_height_at_source * math.exp(-0.0010 * distance_from_shore)
+                    st.metric("Estimated Tsunami Height at Shore", f"{tsunami_height_at_shore:.1f} meters")
+                
+                elif target == "Urban Area":
+                    # Calculate casualties (very approximate)
+                    area_affected = math.pi * (blast_radius/1000)**2  # km²
+                    estimated_casualties = area_affected * population_density * 0.5  # 50% fatality rate in affected area
+                    st.metric("Estimated Casualties", f"{estimated_casualties:,.0f} people")
+                    
+                    # Building damage
+                    building_destruction_radius = blast_radius * (0.6 if building_strength == "Strong" else 
+                                                                0.8 if building_strength == "Medium" else 1.0)
+                    st.metric("Building Destruction Radius", f"{building_destruction_radius:.1f} meters")
+                
+                # Calculate atmospheric effects
+                dust_lofted = mass * 1000 if diameter > 100 else mass * 100  # kg, more for larger asteroids
+                st.metric("Dust Lofted into Atmosphere", f"{dust_lofted:,.0f} kg")
+                
+                # Global cooling effect for large impacts
+                if energy_megatons > 10000:  # Threshold for global effects
+                    cooling = 0.5 + 0.5 * math.log10(energy_megatons / 10000)
+                    st.metric("Potential Global Cooling", f"{cooling:.1f}°C for several months")
+            
+            # Visualization of impact
+            st.subheader("Impact Visualization")
+            
+            # Create a simple visualization
+            fig = go.Figure()
+            
+            # Draw Earth surface
+            x = np.linspace(-blast_radius*1.5, blast_radius*1.5, 100)
+            if target == "Ocean":
+                fig.add_trace(go.Scatter(x=x, y=np.zeros_like(x), mode='lines', name='Ocean Surface', line=dict(color='blue', width=2)))
+                fig.add_trace(go.Scatter(x=x, y=np.ones_like(x)*-water_depth, mode='lines', name='Ocean Floor', line=dict(color='brown', width=2)))
+            else:
+                fig.add_trace(go.Scatter(x=x, y=np.zeros_like(x), mode='lines', name='Ground Level', line=dict(color='brown', width=2)))
+            
+            # Draw crater
+            crater_x = np.linspace(-crater_diameter/2, crater_diameter/2, 100)
+            crater_depth = -crater_diameter/5  # Approximate depth as 1/5 of diameter
+            crater_y = -((1 - (crater_x/(crater_diameter/2))**2) * abs(crater_depth))
+            if target == "Ocean" and abs(crater_depth) < water_depth:
+                fig.add_trace(go.Scatter(x=crater_x, y=crater_y, mode='lines', name='Crater', line=dict(color='darkblue', width=2)))
+            else:
+                bottom_y = np.ones_like(crater_x) * (0 if target != "Ocean" else -water_depth)
+                adjusted_y = np.maximum(crater_y, bottom_y)
+                fig.add_trace(go.Scatter(x=crater_x, y=adjusted_y, mode='lines', name='Crater', line=dict(color='gray', width=2)))
+            
+            # Draw blast radius
+            fig.add_shape(type="circle", xref="x", yref="y", x0=-blast_radius, y0=-blast_radius/4, x1=blast_radius, y1=blast_radius/4, opacity=0.3, fillcolor="orange", line_color="red")
+            
+            # Add asteroid at impact point
+            fig.add_trace(go.Scatter(x=[0], y=[diameter], mode='markers', name='Asteroid', marker=dict(size=20, color='gray')))
+            
+            # Add arrow showing impact direction
+            arrow_length = blast_radius * 0.3
+            arrow_x = arrow_length * math.cos(math.radians(impact_angle))
+            arrow_y = diameter + arrow_length * math.sin(math.radians(impact_angle))
+            fig.add_annotation(x=0, y=diameter, ax=-arrow_x, ay=arrow_y, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=2, arrowwidth=3, arrowcolor="red")
+            
+            # Add shockwave circles
+            for i in range(1, 4):
+                radius = blast_radius * i/3
+                fig.add_shape(type="circle", xref="x", yref="y", x0=-radius, y0=-radius/4, x1=radius, y1=radius/4, opacity=0.1, fillcolor="orange", line_color="red", line_dash="dash")
+            
+            # Update layout
+            fig.update_layout(
+                title="Simulated Impact Cross-Section",
+                xaxis_title="Distance from Impact (meters)",
+                yaxis_title="Height/Depth (meters)",
+                autosize=True,
+                height=500,
+                showlegend=True,
+                xaxis=dict(range=[-blast_radius*1.2, blast_radius*1.2]),
+                yaxis=dict(range=[
+                    min(-water_depth*1.2 if target == "Ocean" else crater_depth*1.5, crater_depth*1.5), 
+                    max(blast_radius/3, diameter*2)
+                ]),
+                legend=dict(x=0.01, y=0.99),
+                margin=dict(l=0, r=0, t=30, b=0)
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Conclusions and notes
+            st.markdown("""
+            <div style='background-color: rgba(240, 240, 240, 0.5); border-radius: 10px; padding: 15px; margin-top: 20px; border-left: 6px solid #FF9800;'>
+                <h4 style='color: #000000; margin-top:0;'>Simulation Notes</h4>
+                <p style='color: #000000;'>
+                This simulation provides approximate results based on physics models and empirical data from impact studies.
+                Actual impacts may vary due to numerous factors including asteroid composition, angle of entry, atmospheric
+                effects, and local geography.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Add historical comparison
+            historical_events = {
+                "Chelyabinsk (2013)": 0.5,
+                "Tunguska (1908)": 10,
+                "Chicxulub (Dinosaur Extinction)": 100000000
+            }
+            
+            st.subheader("Comparison with Historical Events")
+            
+            # Create a bar chart comparing energy
+            comparison_df = pd.DataFrame({
+                'Event': list(historical_events.keys()) + [f"Simulated {diameter}m Asteroid"],
+                'Energy (Megatons)': list(historical_events.values()) + [energy_megatons]
+            })
+            
+            fig = px.bar(comparison_df, x='Event', y='Energy (Megatons)', log_y=True,
+                        color='Energy (Megatons)', color_continuous_scale='Viridis')
+            fig.update_layout(title="Impact Energy Comparison (Log Scale)")
+            st.plotly_chart(fig, use_container_width=True)
+            
+    # Data Explorer Tab
+    with tabs[5]:
         st.subheader("Raw Data Explorer")
         
         # Filter options
