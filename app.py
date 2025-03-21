@@ -27,178 +27,100 @@ st.set_page_config(
 # NASA API Key
 NASA_API_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
 
-# Theme configuration (Dark/Light mode)
-if 'theme' not in st.session_state:
-    st.session_state.theme = "dark"  # Default to dark theme
-
-# Function to apply theme styling
+# Function to apply theme styling - permanently using light theme with black text
 def apply_theme_styling():
-    if st.session_state.theme == "dark":
-        # Apply dark theme styling
-        st.markdown("""
-        <style>
-        .main {
-            background-color: #0E1117;
-            color: #FAFAFA;
-        }
-        .stButton>button {
-            background-color: #2196F3; /* Blue buttons */
-            color: white;
-            border: 1px solid #1E88E5;
-            border-radius: 4px;
-            padding: 0.5rem 1rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .stButton>button:hover {
-            background-color: #1976D2;
-            border-color: #1565C0;
-            box-shadow: 0 3px 7px rgba(0,0,0,0.3);
-        }
-        .stButton>button[kind="primary"] {
-            background-color: #4CAF50; /* Green for primary buttons */
-            border-color: #43A047;
-            color: white;
-        }
-        .stButton>button[kind="primary"]:hover {
-            background-color: #388E3C;
-            box-shadow: 0 3px 7px rgba(0,0,0,0.3);
-        }
-        .stTextInput>div>div>input, .stNumberInput>div>div>input {
-            background-color: #262730;
-            color: #FAFAFA;
-            border-radius: 4px;
-        }
-        .stSelectbox>div>div {
-            background-color: #262730;
-            color: #FAFAFA;
-            border-radius: 4px;
-        }
-        .st-br {
-            border-color: #4B4F5A;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 2px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 4px 4px 0 0;
-            padding: 0.5rem 1rem;
-            background-color: #262730;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .info-box {
-            background-color: #262730;
-            border-left: 4px solid #4CAF50;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .alert-box {
-            background-color: #262730;
-            border-left: 4px solid #F44336;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-    else:
-        # Apply light theme styling
-        st.markdown("""
-        <style>
-        .main {
-            background-color: #FFFFFF;
-            color: #4CAF50; /* Green text color for light mode */
-        }
-        .stButton>button {
-            background-color: #F0F2F6;
-            color: #4CAF50; /* Green text color for buttons */
-            border: 1px solid #4CAF50; /* Green border */
-            border-radius: 4px;
-            padding: 0.5rem 1rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .stButton>button:hover {
-            background-color: #E2F0E3; /* Light green hover */
-            border-color: #3E8E41;
-        }
-        .stButton>button[kind="primary"] {
-            background-color: #4CAF50;
-            color: white;
-            border-color: #3E8E41;
-        }
-        .stButton>button[kind="primary"]:hover {
-            background-color: #3E8E41;
-        }
-        .stTextInput>div>div>input, .stNumberInput>div>div>input {
-            background-color: #F0F2F6;
-            color: #4CAF50; /* Green text color */
-            border-radius: 4px;
-            border: 1px solid #4CAF50; /* Green border */
-        }
-        .stSelectbox>div>div {
-            background-color: #F0F2F6;
-            color: #4CAF50; /* Green text color */
-            border-radius: 4px;
-            border: 1px solid #4CAF50; /* Green border */
-        }
-        .st-br {
-            border-color: #4CAF50; /* Green border */
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 2px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 4px 4px 0 0;
-            padding: 0.5rem 1rem;
-            color: #4CAF50; /* Green text color */
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .info-box {
-            background-color: #F0F2F6;
-            border-left: 4px solid #4CAF50;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            color: #4CAF50; /* Green text color */
-        }
-        .alert-box {
-            background-color: #F0F2F6;
-            border-left: 4px solid #4CAF50; /* Changed to green */
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            color: #4CAF50; /* Green text color */
-        }
-        /* Additional styling for all text elements */
-        p, h1, h2, h3, h4, h5, h6, span, div, label, th, td {
-            color: #4CAF50 !important; /* Enforce green text everywhere */
-        }
-        /* Style for dataframes */
-        .dataframe {
-            color: #4CAF50;
-        }
-        .dataframe th {
-            background-color: #E8F5E9 !important;
-            color: #2E7D32 !important;
-        }
-        .dataframe td {
-            color: #4CAF50 !important;
-        }
-        /* Radio buttons and checkboxes */
-        .stRadio label, .stCheckbox label {
-            color: #4CAF50 !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+    # Apply light theme styling with black text (this is permanent - no toggle button)
+    st.markdown("""
+    <style>
+    .main {
+        background-color: #FFFFFF;
+        color: #000000; /* Black text color for light mode */
+    }
+    .stButton>button {
+        background-color: #F0F2F6;
+        color: #000000; /* Black text color for buttons */
+        border: 1px solid #D2D6DE; 
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #E2E8F0;
+        border-color: #C0C7D1;
+    }
+    .stButton>button[kind="primary"] {
+        background-color: #4CAF50;
+        color: white;
+        border-color: #3E8E41;
+    }
+    .stButton>button[kind="primary"]:hover {
+        background-color: #3E8E41;
+    }
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        background-color: #F0F2F6;
+        color: #000000; /* Black text color */
+        border-radius: 4px;
+        border: 1px solid #D2D6DE;
+    }
+    .stSelectbox>div>div {
+        background-color: #F0F2F6;
+        color: #000000; /* Black text color */
+        border-radius: 4px;
+        border: 1px solid #D2D6DE;
+    }
+    .st-br {
+        border-color: #D2D6DE;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 4px 4px 0 0;
+        padding: 0.5rem 1rem;
+        color: #000000; /* Black text color */
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #4CAF50;
+        color: white;
+    }
+    .info-box {
+        background-color: #F0F2F6;
+        border-left: 4px solid #4CAF50;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        color: #000000; /* Black text color */
+    }
+    .alert-box {
+        background-color: #F0F2F6;
+        border-left: 4px solid #4CAF50;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        color: #000000; /* Black text color */
+    }
+    /* Additional styling for all text elements */
+    p, h1, h2, h3, h4, h5, h6, span, div, label, th, td {
+        color: #000000 !important; /* Enforce black text everywhere */
+    }
+    /* Style for dataframes */
+    .dataframe {
+        color: #000000;
+    }
+    .dataframe th {
+        background-color: #F0F2F6 !important;
+        color: #000000 !important;
+    }
+    .dataframe td {
+        color: #000000 !important;
+    }
+    /* Radio buttons and checkboxes */
+    .stRadio label, .stCheckbox label {
+        color: #000000 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Apply theme styling
 apply_theme_styling()
@@ -344,29 +266,21 @@ with st.sidebar:
     )
     export_button = st.button("Export Data", key="fancy_export_button")
 
-# Main content area
-col1, col2 = st.columns([10, 2])
-with col1:
-    st.markdown("<h1 style='font-size:2.0em; color:#4CAF50;'>Comprehensive Space Threat Assessment and Prediction System</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:1.2em; margin-bottom:20px; color:#4CAF50;'>An advanced asteroid analysis platform for tracking, visualizing, and predicting hazards from Near Earth Objects</p>", unsafe_allow_html=True)
-    st.markdown("""
-    <div style='font-size:0.9em; color:#4CAF50; margin-bottom:20px;'>
-    Advanced monitoring and prediction platform for near-Earth objects, providing threat analysis, 
-    impact simulations, and risk assessment for potential hazardous asteroids approaching Earth.
-    </div>
-    """, unsafe_allow_html=True)
-with col2:
-    # Theme toggle button
-    if st.button("🌙 Dark" if st.session_state.theme == "light" else "☀️ Light"):
-        st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
-        apply_theme_styling()
-        st.rerun()
+# Main content area - Using black text and removing the theme toggle
+st.markdown("<h1 style='font-size:2.0em; color:#000000;'>Comprehensive Space Threat Assessment and Prediction System</h1>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:1.2em; margin-bottom:20px; color:#000000;'>An advanced asteroid analysis platform for tracking, visualizing, and predicting hazards from Near Earth Objects</p>", unsafe_allow_html=True)
+st.markdown("""
+<div style='font-size:0.9em; color:#000000; margin-bottom:20px;'>
+Advanced monitoring and prediction platform for near-Earth objects, providing threat analysis, 
+impact simulations, and risk assessment for potential hazardous asteroids approaching Earth.
+</div>
+""", unsafe_allow_html=True)
 
-# Add space threat assessment info box with custom styling
+# Add space threat assessment info box with custom styling (using black text)
 st.markdown("""
 <style>
 .info-box {
-    background-color: rgba(76, 175, 80, 0.05);
+    background-color: rgba(240, 240, 240, 0.5);
     border-radius: 10px;
     padding: 20px;
     margin: 20px 0;
@@ -374,8 +288,8 @@ st.markdown("""
 }
 </style>
 <div class="info-box">
-    <h3 style="color: #4CAF50; margin-top:0;">About Space Threat Assessment</h3>
-    <p style="color: #4CAF50;">
+    <h3 style="color: #000000; margin-top:0;">About Space Threat Assessment</h3>
+    <p style="color: #000000;">
     This application analyzes Near-Earth Objects (NEOs) to identify potentially hazardous asteroids
     that could pose a threat to Earth. By leveraging NASA's NEO database and advanced machine
     learning algorithms, the system provides comprehensive risk assessment and predictive analytics.
@@ -412,7 +326,7 @@ if fetch_button:
 if 'neo_df' in st.session_state:
     df = st.session_state['neo_df']
     
-    tabs = st.tabs(["Overview", "Visualizations", "Threat Assessment", "Model Insights", "Data Explorer"])
+    tabs = st.tabs(["Overview", "Visualizations", "Threat Assessment", "Model Insights", "Impact Simulator", "Data Explorer"])
     
     # Overview Tab
     with tabs[0]:
