@@ -17,10 +17,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Space Threat Assessment System"
+args = "streamlit_app"
 
 [[workflows.workflow]]
-name = "Space Threat Assessment System"
+name = "streamlit_app"
 author = "agent"
 
 [workflows.workflow.metadata]
