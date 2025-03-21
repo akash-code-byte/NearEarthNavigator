@@ -36,14 +36,16 @@ st.markdown("""
 # NASA API Key
 NASA_API_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
 
-# Function to apply theme styling - permanently using light theme with black text
+# Function to apply theme styling - permanently using light theme with black text and enhanced UI
 def apply_theme_styling():
-    # Apply light theme styling with black text (this is permanent - no toggle button)
+    # Apply enhanced light theme styling with black text (this is permanent - no toggle button)
     st.markdown("""
     <style>
+    /* Base styling */
     .main {
         background-color: #FFFFFF !important;
-        color: #000000 !important; /* Black text color for light mode */
+        color: #000000 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
     }
     .stApp {
         background-color: #FFFFFF !important;
@@ -51,97 +53,291 @@ def apply_theme_styling():
     body {
         background-color: #FFFFFF !important;
     }
+    
+    /* Text styling */
+    p, h1, h2, h3, h4, h5, h6, span, div, label, th, td {
+        color: #000000 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
+    }
+    
+    h1 {
+        font-weight: 600 !important;
+        letter-spacing: -0.5px !important;
+    }
+    
+    h2, h3 {
+        font-weight: 500 !important;
+    }
+    
+    /* Sidebar and containers */
     .css-1d391kg, .css-1v3fvcr, .css-18e3th9, .css-1inwz65 {
         background-color: #FFFFFF !important;
     }
+    
     .sidebar .sidebar-content {
-        background-color: #FFFFFF !important;
+        background-color: #F8F9FA !important;
     }
+    
     [data-testid="stSidebar"] {
+        background-color: #F8F9FA !important;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05) !important;
+        border-right: 1px solid #EAECEF !important;
+        padding: 1.5rem !important;
+    }
+    
+    /* Card styling */
+    [data-testid="stVerticalBlock"] {
+        border-radius: 8px !important;
+    }
+    
+    /* Card hover effect */
+    .stCard {
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    
+    .stCard:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Buttons */
+    .stButton>button {
+        background-color: #F8F9FA !important;
+        color: #000000 !important;
+        border: 1px solid #E0E3E7 !important;
+        border-radius: 6px !important;
+        padding: 0.5rem 1.2rem !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .stButton>button:hover {
+        background-color: #EAECEF !important;
+        border-color: #CED4DA !important;
+        transform: translateY(-1px) !important;
+    }
+    
+    .stButton>button[kind="primary"] {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border-color: #3E8E41 !important;
+        box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3) !important;
+    }
+    
+    .stButton>button[kind="primary"]:hover {
+        background-color: #3E8E41 !important;
+    }
+    
+    /* Input fields */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        background-color: #F8F9FA !important;
+        color: #000000 !important;
+        border-radius: 6px !important;
+        border: 1px solid #E0E3E7 !important;
+        padding: 0.75rem !important;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
+        border-color: #4CAF50 !important;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2) !important;
+    }
+    
+    /* Selectbox */
+    .stSelectbox>div>div {
+        background-color: #F8F9FA !important;
+        color: #000000 !important;
+        border-radius: 6px !important;
+        border: 1px solid #E0E3E7 !important;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    
+    .stSelectbox>div:hover {
+        border-color: #CED4DA !important;
+    }
+    
+    .stSelectbox>div[data-baseweb="select"] > div {
+        background-color: #F8F9FA !important;
+    }
+    
+    /* Dividers */
+    .st-br {
+        border-color: #EAECEF !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px !important;
+        border-bottom: 1px solid #EAECEF !important;
+        padding-bottom: 0 !important;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 6px 6px 0 0 !important;
+        padding: 0.6rem 1.2rem !important;
+        color: #000000 !important;
+        font-weight: 500 !important;
+        background-color: #F8F9FA !important;
+        border: 1px solid #EAECEF !important;
+        border-bottom: none !important;
+        margin-bottom: -1px !important;
+        transition: background-color 0.2s ease !important;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #F0F2F6 !important;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border-color: #4CAF50 !important;
+    }
+    
+    /* Info boxes */
+    .info-box {
+        background-color: #F8F9FA !important;
+        border-left: 4px solid #4CAF50 !important;
+        padding: 1.2rem !important;
+        border-radius: 8px !important;
+        margin-bottom: 1.5rem !important;
+        color: #000000 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .alert-box {
+        background-color: #F8F9FA !important;
+        border-left: 4px solid #4CAF50 !important;
+        padding: 1.2rem !important;
+        border-radius: 8px !important;
+        margin-bottom: 1.5rem !important;
+        color: #000000 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    /* Charts and dataframes */
+    .js-plotly-plot {
+        border-radius: 8px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+        padding: 1rem !important;
         background-color: #FFFFFF !important;
     }
-    .stButton>button {
-        background-color: #F0F2F6;
-        color: #000000; /* Black text color for buttons */
-        border: 1px solid #D2D6DE; 
-        border-radius: 4px;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover {
-        background-color: #E2E8F0;
-        border-color: #C0C7D1;
-    }
-    .stButton>button[kind="primary"] {
-        background-color: #4CAF50;
-        color: white;
-        border-color: #3E8E41;
-    }
-    .stButton>button[kind="primary"]:hover {
-        background-color: #3E8E41;
-    }
-    .stTextInput>div>div>input, .stNumberInput>div>div>input {
-        background-color: #F0F2F6;
-        color: #000000; /* Black text color */
-        border-radius: 4px;
-        border: 1px solid #D2D6DE;
-    }
-    .stSelectbox>div>div {
-        background-color: #F0F2F6;
-        color: #000000; /* Black text color */
-        border-radius: 4px;
-        border: 1px solid #D2D6DE;
-    }
-    .st-br {
-        border-color: #D2D6DE;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 4px 4px 0 0;
-        padding: 0.5rem 1rem;
-        color: #000000; /* Black text color */
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #4CAF50;
-        color: white;
-    }
-    .info-box {
-        background-color: #F0F2F6;
-        border-left: 4px solid #4CAF50;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-        color: #000000; /* Black text color */
-    }
-    .alert-box {
-        background-color: #F0F2F6;
-        border-left: 4px solid #4CAF50;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-        color: #000000; /* Black text color */
-    }
-    /* Additional styling for all text elements */
-    p, h1, h2, h3, h4, h5, h6, span, div, label, th, td {
-        color: #000000 !important; /* Enforce black text everywhere */
-    }
-    /* Style for dataframes */
+    
     .dataframe {
-        color: #000000;
+        color: #000000 !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
     }
+    
     .dataframe th {
         background-color: #F0F2F6 !important;
         color: #000000 !important;
+        padding: 12px 15px !important;
+        text-align: left !important;
+        border-bottom: 1px solid #EAECEF !important;
+        font-weight: 600 !important;
     }
+    
     .dataframe td {
         color: #000000 !important;
+        padding: 10px 15px !important;
+        border-bottom: 1px solid #EAECEF !important;
     }
+    
+    .dataframe tr:nth-child(even) {
+        background-color: #F8F9FA !important;
+    }
+    
+    .dataframe tr:hover {
+        background-color: #F0F2F6 !important;
+    }
+    
     /* Radio buttons and checkboxes */
     .stRadio label, .stCheckbox label {
         color: #000000 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Metrics */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem !important;
+        font-weight: 600 !important;
+        color: #4CAF50 !important;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-weight: 500 !important;
+    }
+    
+    /* Plotly chart enhancements */
+    .js-plotly-plot .plotly .main-svg {
+        border-radius: 8px !important;
+    }
+    
+    /* Animations */
+    .stButton>button, .stSelectbox>div, .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        transition: all 0.3s ease !important;
+    }
+    
+    /* Modern scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px !important;
+        height: 8px !important;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #F8F9FA !important;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #CED4DA !important;
+        border-radius: 4px !important;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #ADB5BD !important;
+    }
+    
+    /* Container for dashboard items */
+    .dashboard-container {
+        background-color: #F8F9FA !important;
+        border-radius: 10px !important;
+        padding: 20px !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    /* Tooltip styling */
+    .tooltip {
+        position: relative !important;
+        display: inline-block !important;
+        cursor: pointer !important;
+    }
+    
+    .tooltip .tooltiptext {
+        visibility: hidden !important;
+        width: 200px !important;
+        background-color: #555 !important;
+        color: #fff !important;
+        text-align: center !important;
+        border-radius: 6px !important;
+        padding: 10px !important;
+        position: absolute !important;
+        z-index: 1 !important;
+        bottom: 125% !important;
+        left: 50% !important;
+        margin-left: -100px !important;
+        opacity: 0 !important;
+        transition: opacity 0.3s !important;
+    }
+    
+    .tooltip:hover .tooltiptext {
+        visibility: visible !important;
+        opacity: 1 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -290,34 +486,49 @@ with st.sidebar:
     )
     export_button = st.button("Export Data", key="fancy_export_button")
 
-# Main content area - Using black text and removing the theme toggle
-st.markdown("<h1 style='font-size:2.0em; color:#000000;'>Comprehensive Space Threat Assessment and Prediction System</h1>", unsafe_allow_html=True)
-st.markdown("<p style='font-size:1.2em; margin-bottom:20px; color:#000000;'>An advanced asteroid analysis platform for tracking, visualizing, and predicting hazards from Near Earth Objects</p>", unsafe_allow_html=True)
+# Main content area - Enhanced UI with modern dashboard layout
 st.markdown("""
-<div style='font-size:0.9em; color:#000000; margin-bottom:20px;'>
-Advanced monitoring and prediction platform for near-Earth objects, providing threat analysis, 
-impact simulations, and risk assessment for potential hazardous asteroids approaching Earth.
+<div style="text-align: center; padding: 10px 0; margin-bottom: 20px;">
+    <h1 style='font-size: 2.5em; font-weight: 700; color: #000000; margin-bottom: 10px;'>
+        <span style="color: #4CAF50;">☄️</span> Comprehensive Space Threat Assessment
+    </h1>
+    <p style='font-size: 1.3em; color: #333333; max-width: 800px; margin: 0 auto 15px;'>
+        An advanced platform for tracking, visualizing, and predicting hazards from Near Earth Objects
+    </p>
+    <div style='width: 100px; height: 3px; background-color: #4CAF50; margin: 0 auto 25px;'></div>
 </div>
 """, unsafe_allow_html=True)
 
-# Add space threat assessment info box with custom styling (using black text)
+# Create a modern dashboard-style info container
 st.markdown("""
-<style>
-.info-box {
-    background-color: rgba(240, 240, 240, 0.5);
-    border-radius: 10px;
-    padding: 20px;
-    margin: 20px 0;
-    border-left: 6px solid #4CAF50;
-}
-</style>
-<div class="info-box">
-    <h3 style="color: #000000; margin-top:0;">About Space Threat Assessment</h3>
-    <p style="color: #000000;">
-    This application analyzes Near-Earth Objects (NEOs) to identify potentially hazardous asteroids
-    that could pose a threat to Earth. By leveraging NASA's NEO database and advanced machine
-    learning algorithms, the system provides comprehensive risk assessment and predictive analytics.
-    </p>
+<div style="background-color: #F8F9FA; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);">
+    <div style="display: flex; align-items: flex-start;">
+        <div style="flex: 1;">
+            <h3 style="color: #000000; margin-top: 0; font-size: 1.3em; font-weight: 600;">About Space Threat Assessment</h3>
+            <p style="color: #000000; line-height: 1.6; margin-bottom: 15px;">
+                This application analyzes Near-Earth Objects (NEOs) to identify potentially hazardous asteroids
+                that could pose a threat to Earth. By leveraging NASA's NEO database and advanced machine
+                learning algorithms, the system provides comprehensive risk assessment and predictive analytics.
+            </p>
+            <div style="margin-top: 15px;">
+                <span style="background-color: rgba(76, 175, 80, 0.15); color: #2E7D32; padding: 5px 10px; border-radius: 15px; font-size: 0.9em; margin-right: 8px;">
+                    <strong>Real-time Data</strong>
+                </span>
+                <span style="background-color: rgba(33, 150, 243, 0.15); color: #1565C0; padding: 5px 10px; border-radius: 15px; font-size: 0.9em; margin-right: 8px;">
+                    <strong>ML Predictions</strong>
+                </span>
+                <span style="background-color: rgba(255, 152, 0, 0.15); color: #E65100; padding: 5px 10px; border-radius: 15px; font-size: 0.9em;">
+                    <strong>Impact Simulations</strong>
+                </span>
+            </div>
+        </div>
+        <div style="width: 160px; margin-left: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="background-color: rgba(76, 175, 80, 0.1); border-radius: 50%; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center;">
+                <div style="font-size: 40px;">☄️</div>
+            </div>
+            <div style="margin-top: 10px; text-align: center; font-weight: 500;">NASA data-driven</div>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -346,50 +557,206 @@ if fetch_button:
         else:
             st.error("Failed to fetch data from NASA API. Please try again.")
 
-# Main tabs
+# Main tabs - Enhanced UI
 if 'neo_df' in st.session_state:
     df = st.session_state['neo_df']
     
-    tabs = st.tabs(["Overview", "Visualizations", "Threat Assessment", "Model Insights", "Impact Simulator", "Data Explorer"])
+    # Create a better-looking tab system with icons
+    st.markdown("""
+    <style>
+    .custom-tabs {
+        margin-top: 20px;
+        margin-bottom: 25px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Custom tab container
+    st.markdown('<div class="custom-tabs"></div>', unsafe_allow_html=True)
+    
+    # Define tab icons
+    tab_icons = {
+        "Overview": "📊",
+        "Visualizations": "🔍",
+        "Threat Assessment": "⚠️",
+        "Model Insights": "🧠",
+        "Impact Simulator": "💥",
+        "Data Explorer": "🔎"
+    }
+    
+    # Create tab names with icons
+    tab_names = [f"{icon} {name}" for name, icon in tab_icons.items()]
+    
+    tabs = st.tabs(tab_names)
     
     # Overview Tab
     with tabs[0]:
         st.subheader("Near-Earth Object Overview")
         
-        # Key metrics
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            total_objects = len(df)
-            st.metric("Total NEOs", total_objects)
-        with col2:
-            potentially_hazardous = df['is_potentially_hazardous'].sum()
-            st.metric("Potentially Hazardous", potentially_hazardous)
-        with col3:
-            avg_miss_distance = df['miss_distance'].mean() / 1000000  # km
-            st.metric("Avg. Miss Distance", f"{avg_miss_distance:.2f} million km")
-        with col4:
-            max_diameter = df['estimated_diameter_max'].max() * 1000  # meters
-            st.metric("Max Diameter", f"{max_diameter:.1f} m")
+        # Enhanced metrics with cards and icons
+        st.markdown("""
+        <style>
+        .metric-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px 15px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+            border-top: 4px solid #4CAF50;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        .metric-title {
+            font-size: 1rem;
+            color: #555;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .metric-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+        </style>
+        """, unsafe_allow_html=True)
         
-        # Distribution plots of key features
-        st.subheader("NEO Distribution")
+        # Calculate metrics
+        total_objects = len(df)
+        potentially_hazardous = df['is_potentially_hazardous'].sum()
+        avg_miss_distance = df['miss_distance'].mean() / 1000000  # km
+        max_diameter = df['estimated_diameter_max'].max() * 1000  # meters
+        
+        # Create 4 columns
+        col1, col2, col3, col4 = st.columns(4)
+        
+        # Custom metric cards with icons
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon">🔭</div>
+                <div class="metric-title">Total NEOs</div>
+                <div class="metric-value">{total_objects}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top-color: #FF5722;">
+                <div class="metric-icon" style="color: #FF5722;">⚠️</div>
+                <div class="metric-title">Potentially Hazardous</div>
+                <div class="metric-value" style="color: #FF5722;">{potentially_hazardous}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top-color: #2196F3;">
+                <div class="metric-icon" style="color: #2196F3;">📏</div>
+                <div class="metric-title">Avg. Miss Distance</div>
+                <div class="metric-value" style="color: #2196F3;">{avg_miss_distance:.2f}<span style="font-size: 1rem;"> M km</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top-color: #9C27B0;">
+                <div class="metric-icon" style="color: #9C27B0;">📊</div>
+                <div class="metric-title">Max Diameter</div>
+                <div class="metric-value" style="color: #9C27B0;">{max_diameter:.1f}<span style="font-size: 1rem;"> m</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Enhanced distribution plots with card styling
+        st.markdown("""
+        <style>
+        .chart-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            border-left: 5px solid #4CAF50;
+        }
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        st.markdown('<h3 style="margin-top:30px; margin-bottom:20px; font-size:1.5rem;">NEO Distribution Analysis</h3>', unsafe_allow_html=True)
+        
         col1, col2 = st.columns(2)
         
         with col1:
+            st.markdown('<div class="chart-card" style="border-left-color: #4CAF50;">', unsafe_allow_html=True)
+            st.markdown('<div class="chart-title">Distribution of Absolute Magnitude</div>', unsafe_allow_html=True)
+            
             fig = px.histogram(df, x="absolute_magnitude", 
-                              title="Distribution of Absolute Magnitude",
-                              labels={"absolute_magnitude": "Absolute Magnitude (H)"},
-                              color_discrete_sequence=['#4CAF50'])
-            fig.update_layout(showlegend=False)
+                             labels={"absolute_magnitude": "Absolute Magnitude (H)"},
+                             color_discrete_sequence=['#4CAF50'],
+                             opacity=0.8)
+            
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(l=40, r=40, t=30, b=40),
+                plot_bgcolor='rgba(248,249,250,0.5)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(
+                    title_font=dict(size=14),
+                    gridcolor='rgba(220,220,220,0.5)'
+                ),
+                yaxis=dict(
+                    title="Count",
+                    title_font=dict(size=14),
+                    gridcolor='rgba(220,220,220,0.5)'
+                ),
+                bargap=0.05
+            )
+            
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         
         with col2:
+            st.markdown('<div class="chart-card" style="border-left-color: #2196F3;">', unsafe_allow_html=True)
+            st.markdown('<div class="chart-title">Distribution of Estimated Diameter</div>', unsafe_allow_html=True)
+            
             fig = px.histogram(df, x="estimated_diameter_max", 
-                              title="Distribution of Estimated Diameter",
-                              labels={"estimated_diameter_max": "Maximum Estimated Diameter (km)"},
-                              color_discrete_sequence=['#2196F3'])
-            fig.update_layout(showlegend=False)
+                             labels={"estimated_diameter_max": "Maximum Estimated Diameter (km)"},
+                             color_discrete_sequence=['#2196F3'],
+                             opacity=0.8)
+            
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(l=40, r=40, t=30, b=40),
+                plot_bgcolor='rgba(248,249,250,0.5)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(
+                    title_font=dict(size=14),
+                    gridcolor='rgba(220,220,220,0.5)'
+                ),
+                yaxis=dict(
+                    title="Count",
+                    title_font=dict(size=14),
+                    gridcolor='rgba(220,220,220,0.5)'
+                ),
+                bargap=0.05
+            )
+            
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         
         # Overview map of asteroids
         st.subheader("Miss Distance vs. Relative Velocity")
