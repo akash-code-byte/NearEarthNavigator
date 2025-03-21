@@ -282,7 +282,22 @@ def plot_correlation_heatmap(df):
 
 def plot_feature_distributions(df):
     """
-    Create a grid of histograms showing distributions of key features
+    Create a grid of histograms showing distributions of key features with improved spacing
+    """
+    # Select relevant features
+    features = [
+        'absolute_magnitude', 'estimated_diameter_max', 'relative_velocity', 
+        'miss_distance', 'diameter_velocity_ratio', 'energy_proxy'
+    ]
+    
+    # Create subplot grid with increased spacing and height
+    fig = make_subplots(
+        rows=3, 
+        cols=2,
+        subplot_titles=[f.replace('_', ' ').title() for f in features],
+        vertical_spacing=0.2,
+        horizontal_spacing=0.1
+    )
     
     Parameters:
     -----------

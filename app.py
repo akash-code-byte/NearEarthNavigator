@@ -795,7 +795,21 @@ if 'neo_df' in st.session_state:
         st.subheader("Advanced Visualizations")
         
         # Visualization selector using session state to maintain selection
-        viz_options = ["Asteroid Distribution", "3D Space Visualization", "Trajectory Analysis", "Time Series Analysis", "Close Approach Map"]
+        if 'viz_type' not in st.session_state:
+            st.session_state.viz_type = "Asteroid Distribution"
+            
+        viz_options = ["Asteroid Distribution", "3D Space Visualization", "Trajectory Analysis", 
+                      "Time Series Analysis", "Close Approach Map", "Model Comparison"]
+        
+        selected_viz = st.radio(
+            "Select Visualization Type",
+            viz_options,
+            key='viz_radio',
+            index=viz_options.index(st.session_state.viz_type)
+        )
+        
+        # Update session state
+        st.session_state.viz_type = selected_viz
         
         # Add previous selection to session state if not present
         if 'previous_viz_type' not in st.session_state:
@@ -832,6 +846,92 @@ if 'neo_df' in st.session_state:
             fig = plot_correlation_heatmap(df)
             st.plotly_chart(fig, use_container_width=True)
             
+        elif viz_type == "Model Comparison":
+            st.subheader("Model Comparison and Training")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Model selection for comparison
+                models_to_compare = st.multiselect(
+                    "Select Models to Compare",
+                    ["Random Forest", "XGBoost", "Neural Network", "Logistic Regression"],
+                    default=["Random Forest", "XGBoost"]
+                )
+                
+                # Training parameters
+                epochs = st.slider("Training Epochs", 10, 200, 50)
+                cv_folds = st.slider("Cross-validation Folds", 3, 10, 5)
+                
+                if st.button("Train and Compare Models"):
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    results = {}
+                    for i, model_name in enumerate(models_to_compare):
+                        status_text.text(f"Training {model_name}...")
+                        model, metrics, _ = train_and_evaluate_models(
+                            df, model_name, {'epochs': epochs, 'cv_folds': cv_folds}
+                        )
+                        results[model_name] = metrics
+                        progress_bar.progress((i + 1) / len(models_to_compare))
+                    
+                    # Create comparison dataframe
+                    comparison_df = pd.DataFrame({
+                        model: {
+                            'Accuracy': results[model]['accuracy'],
+                            'Precision': results[model]['precision'],
+                            'Recall': results[model]['recall'],
+                            'F1 Score': results[model]['f1'],
+                            'AUC': results[model]['auc']
+                        } for model in results
+                    })
+                    
+                    st.dataframe(comparison_df)
+                    
+                    # Plot comparison
+                    fig = go.Figure()
+                    for model in results:
+                        fig.add_trace(go.Scatter(
+                            x=results[model]['fpr'],
+                            y=results[model]['tpr'],
+                            name=f"{model} (AUC={results[model]['auc']:.3f})"
+                        ))
+                    
+                    fig.add_trace(go.Scatter(
+                        x=[0, 1], y=[0, 1],
+                        mode='lines',
+                        name='Random',
+                        line=dict(dash='dash')
+                    ))
+                    
+                    fig.update_layout(
+                        title='ROC Curves Comparison',
+                        xaxis_title='False Positive Rate',
+                        yaxis_title='True Positive Rate',
+                        height=500
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                st.subheader("Training History")
+                # Add training metrics plot
+                if 'training_history' in st.session_state:
+                    fig = go.Figure()
+                    for metric in ['loss', 'val_loss']:
+                        fig.add_trace(go.Scatter(
+                            y=st.session_state.training_history[metric],
+                            name=metric
+                        ))
+                    fig.update_layout(
+                        title='Training History',
+                        xaxis_title='Epoch',
+                        yaxis_title='Loss',
+                        height=300
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                
         elif viz_type == "3D Space Visualization":
             # 3D visualization of asteroids
             st.subheader("3D Asteroid Positions")
@@ -1157,7 +1257,13 @@ if 'neo_df' in st.session_state:
                                labels=dict(color="Count"),
                                text_auto=True)
                 
-                fig.update_layout(width=300, height=300, margin=dict(l=10, r=10, t=10, b=10))
+                fig.update_layout(
+                    width=400, height=400,
+                    margin=dict(l=40, r=40, t=40, b=40),
+                    xaxis_title="Predicted",
+                    yaxis_title="Actual",
+                    title="Confusion Matrix"
+                )
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Confusion matrix data not available.")
