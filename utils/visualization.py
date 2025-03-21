@@ -548,7 +548,7 @@ def create_3d_asteroid_visualization(df, map_type='3d'):
         
         return fig
     
-    def create_3d_asteroid_visualization(df, map_type='3d'):
+    # Original 3D visualization code
     """
     Create a 3D visualization of asteroids
     
