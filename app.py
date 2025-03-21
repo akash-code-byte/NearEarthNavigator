@@ -19,7 +19,7 @@ from utils.export import export_data, export_visualization
 
 # Set page config
 st.set_page_config(
-    page_title="Comprehensive Space Threat Assessment and Prediction System",
+    page_title="Comprehensive Space Threat Assessment and Prediction System (Local)",
     page_icon="☄️",
     layout="wide",
     initial_sidebar_state="expanded"
